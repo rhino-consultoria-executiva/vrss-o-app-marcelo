@@ -1,0 +1,568 @@
+import React, { useState } from 'react';
+import { 
+  Sparkles, 
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  AlertOctagon,
+  Phone,
+  Mail,
+  Loader2,
+  Check,
+  Plus,
+  X,
+  TrendingUp,
+  FileSpreadsheet
+} from 'lucide-react';
+import { Lead, Customer } from '../types';
+
+interface SalesFunnelViewProps {
+  leads: Lead[];
+  setLeads: React.Dispatch<React.SetStateAction<Lead[]>>;
+  customers: Customer[];
+  setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
+  onApproveLeadToServiceOrder: (lead: Lead) => void;
+}
+
+export default function SalesFunnelView({
+  leads,
+  setLeads,
+  customers,
+  setCustomers,
+  onApproveLeadToServiceOrder
+}: SalesFunnelViewProps) {
+  // States for diagnostic loader and modal view
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [addingToColumn, setAddingToColumn] = useState<'leads' | null>(null);
+  const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+
+  // Form states for rapid inline addition inside column
+  const [newLeadForm, setNewLeadForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    vehicleBrand: '',
+    vehicleModel: '',
+    vehicleYear: 2020,
+    vehiclePlate: '',
+    description: '',
+    category: 'Diagnóstico' as Lead['category'],
+    value: '' as number | '',
+    priority: 'NORMAL' as Lead['priority'],
+  });
+
+  // Target columns corresponding to stages
+  const columns = [
+    { id: 'leads', title: 'Novo Lead', color: '#818cf8' },
+    { id: 'quotes', title: 'Orçamento Enviado', color: '#6366f1' },
+    { id: 'negotiation', title: 'Negociação', color: '#a5b4fc' },
+    { id: 'approved', title: 'Serviço Aprovado', color: '#10b981' }
+  ];
+
+  // Helper BRL currency formatter
+  const formatBRL = (value: number | '') => {
+    if (value === '' || isNaN(value)) return 'A definir';
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+  };
+
+  // Helper to relocate leads between stages with precise button bounds
+  const moveLead = (leadId: string, direction: 'prev' | 'next') => {
+    const stages: Lead['stage'][] = ['leads', 'quotes', 'negotiation', 'approved'];
+    setLeads(prevLeads => prevLeads.map(lead => {
+      if (lead.id !== leadId) return lead;
+      const currentIndex = stages.indexOf(lead.stage);
+      let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+      if (nextIndex < 0) nextIndex = 0;
+      if (nextIndex >= stages.length) nextIndex = stages.length - 1;
+
+      // When lead is moved to "approved", trigger OS creation
+      const updatedLead = { ...lead, stage: stages[nextIndex] };
+      if (stages[nextIndex] === 'approved' && lead.stage !== 'approved') {
+        setTimeout(() => {
+          onApproveLeadToServiceOrder(updatedLead);
+        }, 150);
+      }
+      return updatedLead;
+    }));
+  };
+
+
+
+  const deleteLead = (leadId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLeads(prev => prev.filter(l => l.id !== leadId));
+    if (selectedLead?.id === leadId) setSelectedLead(null);
+    setFeedbackMsg("Oportunidade removida com sucesso do funil de vendas.");
+    setTimeout(() => setFeedbackMsg(null), 3000);
+  };
+
+  // Add new lead directly to specific column
+  const handleCreateLeadInline = () => {
+    if (!newLeadForm.name || !newLeadForm.vehicleModel) {
+      setFeedbackMsg("Erro: Digite o nome do cliente e modelo do veículo.");
+      setTimeout(() => setFeedbackMsg(null), 3500);
+      return;
+    }
+
+    const uniqueId = `LEAD-${Date.now().toString().slice(-3)}`;
+    const freshLead: Lead = {
+      id: uniqueId,
+      name: newLeadForm.name,
+      email: newLeadForm.email || `${newLeadForm.name.toLowerCase().replace(/\s/g, '')}@email.com`,
+      phone: newLeadForm.phone || '+55 11 99999-8888',
+      vehicleBrand: newLeadForm.vehicleBrand || 'Veículo',
+      vehicleModel: newLeadForm.vehicleModel,
+      vehicleYear: newLeadForm.vehicleYear,
+      vehiclePlate: newLeadForm.vehiclePlate.toUpperCase() || 'DEF-1234',
+      description: newLeadForm.description || 'Nenhum sintoma adicional informado.',
+      category: newLeadForm.category,
+      value: newLeadForm.value,
+      priority: newLeadForm.priority,
+      stage: addingToColumn || 'leads',
+      dateCreated: 'Agora mesmo'
+    };
+
+    setLeads(prev => [freshLead, ...prev]);
+    setAddingToColumn(null);
+    setFeedbackMsg(`Sucesso! Lead "${freshLead.name}" adicionado.`);
+    setTimeout(() => setFeedbackMsg(null), 3000);
+    setNewLeadForm({
+      name: '',
+      email: '',
+      phone: '',
+      vehicleBrand: '',
+      vehicleModel: '',
+      vehicleYear: 2022,
+      vehiclePlate: '',
+      description: '',
+      category: 'Diagnóstico',
+      value: '',
+      priority: 'NORMAL',
+    });
+  };
+
+  // Manual save for single leads
+  const handleSaveLeadEdits = () => {
+    if (!selectedLead) return;
+    setLeads(prev => prev.map(l => l.id === selectedLead.id ? selectedLead : l));
+    setIsEditing(false);
+    setFeedbackMsg("Informações da oportunidade salvas com sucesso!");
+    setTimeout(() => setFeedbackMsg(null), 3000);
+  };
+
+  return (
+    <div id="sales-funnel-view" className="p-8 space-y-6 bg-zinc-950 text-zinc-100 min-h-[calc(100vh-80px)] font-sans">
+      
+      {/* Funnel header block */}
+      <div id="funnel-instructions-panel" className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl flex items-center justify-between shadow-sm">
+        <div>
+          <h3 className="font-semibold text-xs uppercase tracking-wider text-white">Funil de Vendas e Oportunidades</h3>
+          <p className="text-xs text-zinc-400 mt-0.5">Gerencie os leads da sua oficina, acompanhe propostas de orçamento e avance as negociações até a aprovação.</p>
+        </div>
+        <button
+          onClick={() => setAddingToColumn('leads')}
+          className="bg-zinc-900 hover:bg-red-650 border border-zinc-800 hover:border-red-500 font-mono text-[11px] font-bold py-2 px-3.5 rounded-lg text-white uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer"
+        >
+          <Plus className="w-4 h-4" /> Novo Lead
+        </button>
+      </div>
+
+      {/* Grid columns */}
+      <div id="kanban-grid" className="flex xl:grid xl:grid-cols-4 gap-6 items-start overflow-x-auto pb-4 max-w-full xl:overflow-x-visible">
+        {columns.map((column) => {
+          const colLeads = leads.filter(l => l.stage === column.id);
+
+          return (
+            <div 
+              key={column.id} 
+              id={`kanban-col-${column.id}`}
+              className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex flex-col max-h-[80vh] shadow-sm w-[290px] sm:w-[320px] xl:w-auto shrink-0"
+            >
+              {/* Header column */}
+              <div className="flex justify-between items-center pb-3 border-b border-zinc-800 mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: column.color }} />
+                  <h4 className="font-semibold text-xs uppercase tracking-wider text-white">{column.title}</h4>
+                </div>
+                <span className="font-mono text-[11px] bg-zinc-950 px-2.5 py-0.5 rounded-md text-zinc-400 font-bold">
+                  {colLeads.length}
+                </span>
+              </div>
+
+              {/* Add form inside column toggle */}
+              {addingToColumn === column.id && (
+                <div id="inline-insert-form" className="bg-zinc-950 border border-indigo-500/30 p-4 rounded-xl mb-4 space-y-3 shadow-inner">
+                  <div className="flex justify-between items-center">
+                    <span className="font-mono text-[9px] uppercase font-bold text-indigo-400">Cadastro Rápido</span>
+                    <button onClick={() => setAddingToColumn(null)} className="text-zinc-500 hover:text-white">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  
+                  <input
+                    type="text"
+                    placeholder="Nome do Cliente *"
+                    value={newLeadForm.name}
+                    onChange={(e) => setNewLeadForm({ ...newLeadForm, name: e.target.value })}
+                    className="w-full bg-[#111415] border border-[#2d2d2d] rounded px-2 py-1.5 text-xs text-white outline-none focus:border-[#ff535b]"
+                  />
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Marca (ex: BMW)"
+                      value={newLeadForm.vehicleBrand}
+                      onChange={(e) => setNewLeadForm({ ...newLeadForm, vehicleBrand: e.target.value })}
+                      className="bg-[#111415] border border-[#2d2d2d] rounded px-2 py-1.5 text-xs text-white outline-none"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Modelo veículo *"
+                      value={newLeadForm.vehicleModel}
+                      onChange={(e) => setNewLeadForm({ ...newLeadForm, vehicleModel: e.target.value })}
+                      className="bg-[#111415] border border-[#2d2d2d] rounded px-2 py-1.5 text-xs text-white outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Placa carro"
+                      value={newLeadForm.vehiclePlate}
+                      onChange={(e) => setNewLeadForm({ ...newLeadForm, vehiclePlate: e.target.value })}
+                      className="bg-[#111415] border border-[#2d2d2d] rounded px-2 py-1.5 text-xs text-white outline-none uppercase"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Preço (Opcional)"
+                      value={newLeadForm.value}
+                      onChange={(e) => setNewLeadForm({ ...newLeadForm, value: e.target.value !== '' ? parseFloat(e.target.value) : '' })}
+                      className="bg-[#111415] border border-[#2d2d2d] rounded px-2 py-1.5 text-xs text-white outline-none"
+                    />
+                  </div>
+
+                  <textarea
+                    placeholder="Descrição dos Sintomas / Defeito..."
+                    value={newLeadForm.description}
+                    onChange={(e) => setNewLeadForm({ ...newLeadForm, description: e.target.value })}
+                    className="w-full h-16 bg-[#111415] border border-[#2d2d2d] rounded px-2 py-1.5 text-xs text-white outline-none resize-none"
+                  />
+
+                  <div className="flex gap-2">
+                    <select
+                      value={newLeadForm.priority}
+                      onChange={(e) => setNewLeadForm({ ...newLeadForm, priority: e.target.value as Lead['priority'] })}
+                      className="w-1/2 bg-[#111415] border border-[#2d2d2d] rounded px-2 py-1 text-xs text-white outline-none"
+                    >
+                      <option value="NORMAL">NORMAL</option>
+                      <option value="ALTA">ALTA</option>
+                      <option value="URGENTE">URGENTE</option>
+                    </select>
+
+                    <select
+                      value={newLeadForm.category}
+                      onChange={(e) => setNewLeadForm({ ...newLeadForm, category: e.target.value as Lead['category'] })}
+                      className="w-1/2 bg-[#111415] border border-[#2d2d2d] rounded px-2 py-1 text-xs text-white outline-none"
+                    >
+                      <option value="Diagnóstico">Diagnóstico</option>
+                      <option value="Tuning">Tuning</option>
+                      <option value="Revisão">Revisão</option>
+                      <option value="Manutenção">Manutenção</option>
+                      <option value="Upgrade">Upgrade</option>
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={handleCreateLeadInline}
+                    className="w-full bg-[#ff535b] text-black font-mono font-bold py-2 text-xs rounded uppercase tracking-wider transition-all"
+                  >
+                    Adicionar Oportunidade
+                  </button>
+                </div>
+              )}
+
+              {/* Column lead cards stack */}
+              <div id={`kanban-cards-${column.id}`} className="space-y-4 overflow-y-auto pr-1 flex-1 min-h-[40vh]">
+                {colLeads.map((lead) => {
+                  const isUrg = lead.priority === 'URGENTE';
+
+                  return (
+                    <div
+                      key={lead.id}
+                      id={`lead-card-${lead.id}`}
+                      onClick={() => { setSelectedLead(lead); setIsEditing(false); }}
+                      className={`cursor-pointer bg-zinc-900 hover:bg-zinc-800 rounded-xl p-4 border transition-all text-left relative shadow-sm ${
+                        isUrg ? 'border-l-4 border-l-indigo-500 border-zinc-800' : 'border-zinc-800'
+                      }`}
+                    >
+                      {/* Priority Warning Header */}
+                      <div className="flex justify-between items-start">
+                        <span className={`font-mono text-[9px] px-1.5 py-0.5 rounded font-bold ${
+                          isUrg ? 'bg-indigo-500/25 text-indigo-400' :
+                          lead.priority === 'ALTA' ? 'bg-amber-500/20 text-amber-500' :
+                          'bg-zinc-800 text-zinc-400'
+                        }`}>
+                          {lead.priority}
+                        </span>
+
+                        <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                          {/* Chevron navigations for direct shifting */}
+                          <button
+                            title="Mover para esquerda"
+                            onClick={() => moveLead(lead.id, 'prev')}
+                            className="p-1 hover:bg-[#2d2d2d] rounded text-[#ab8987] hover:text-white"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            title="Mover para direita"
+                            onClick={() => moveLead(lead.id, 'next')}
+                            className="p-1 hover:bg-[#2d2d2d] rounded text-[#ab8987] hover:text-white"
+                          >
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            title="Excluir Lead"
+                            onClick={(e) => deleteLead(lead.id, e)}
+                            className="p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-rose-400"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Client Name */}
+                      <h5 id={`lead-name-${lead.id}`} className="font-bold text-white mt-2 leading-snug">{lead.name}</h5>
+                      <p id={`lead-vehicle-${lead.id}`} className="font-mono text-[11px] text-[#ab8987] mt-1">
+                        {lead.vehicleBrand} {lead.vehicleModel} - <span className="text-white/60">{lead.vehiclePlate || 'S/P'}</span>
+                      </p>
+
+                      {/* Complaint symptom description */}
+                      <p className="text-xs text-[#e1e3e4]/60 mt-2 line-clamp-2 h-8 leading-snug">
+                        {lead.description}
+                      </p>
+
+                      {/* Card Divider */}
+                      <div className="w-full h-px bg-[#2d2d2d] my-3" />
+
+                      {/* Footer Badge values */}
+                      <div className="flex justify-between items-center">
+                        <span className="font-mono text-[9px] bg-zinc-800 border border-zinc-700 text-zinc-300 px-2.5 py-0.5 rounded font-semibold uppercase">
+                          {lead.category}
+                        </span>
+                        
+                        <span className="font-mono text-xs font-bold text-white">
+                          {formatBRL(lead.value)}
+                        </span>
+                      </div>
+
+                      {/* Card Creation Date */}
+                      <div className="mt-3.5 pt-2 border-t border-[#262829]/50 flex items-center justify-between" onClick={e => e.stopPropagation()}>
+                        <span className="font-mono text-[9px] text-[#ab8987]/70 uppercase">{lead.dateCreated}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {colLeads.length === 0 && (
+                  <div className="border border-dashed border-[#2d2d2d] rounded-[4px] py-10 px-4 text-center text-[#ab8987] text-xs">
+                    Nenhum convite para esta área.
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* LEAD DETAILS & AI DIAGNOSIS MODAL */}
+      {selectedLead && (
+        <div id="lead-details-modal" className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-2xl w-full p-6 text-left space-y-6 relative max-h-[90vh] overflow-y-auto shadow-2xl">
+            
+            {/* Header info */}
+            <div className="flex justify-between items-start border-b border-zinc-800 pb-4">
+              <div>
+                <span className="font-mono text-[9px] text-white bg-indigo-600 px-2.5 py-0.5 rounded font-bold uppercase">{selectedLead.priority}</span>
+                <h4 className="font-semibold text-lg text-white mt-1.5 uppercase tracking-tight">{selectedLead.name}</h4>
+                <p className="font-mono text-xs text-zinc-500 mt-1">Código ID Oportunidade: {selectedLead.id}</p>
+              </div>
+              <button 
+                onClick={() => setSelectedLead(null)}
+                className="w-8 h-8 rounded-lg bg-zinc-950 text-zinc-400 hover:text-white flex items-center justify-center border border-zinc-800 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Editing and detail switch */}
+            {isEditing ? (
+              <div className="space-y-4">
+                <div id="editing-fields-form" className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="font-mono text-[10px] text-[#ab8987] uppercase">Cliente</label>
+                    <input 
+                      type="text" 
+                      value={selectedLead.name}
+                      onChange={e => setSelectedLead({ ...selectedLead, name: e.target.value })}
+                      className="w-full bg-[#111415] border border-[#2d2d2d] text-[#e1e3e4] rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-mono text-[10px] text-[#ab8987] uppercase">Mapeamento de E-mail</label>
+                    <input 
+                      type="email" 
+                      value={selectedLead.email}
+                      onChange={e => setSelectedLead({ ...selectedLead, email: e.target.value })}
+                      className="w-full bg-[#111415] border border-[#2d2d2d] text-[#e1e3e4] rounded px-3 py-2 text-xs outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <label className="font-mono text-[10px] text-[#ab8987] uppercase">Telefone</label>
+                    <input 
+                      type="text" 
+                      value={selectedLead.phone}
+                      onChange={e => setSelectedLead({ ...selectedLead, phone: e.target.value })}
+                      className="w-full bg-[#111415] border border-[#2d2d2d] text-[#e1e3e4] rounded px-3 py-2 text-xs outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-mono text-[10px] text-[#ab8987] uppercase">Carro Modelo</label>
+                    <input 
+                      type="text" 
+                      value={selectedLead.vehicleModel}
+                      onChange={e => setSelectedLead({ ...selectedLead, vehicleModel: e.target.value })}
+                      className="w-full bg-[#111415] border border-[#2d2d2d] text-[#e1e3e4] rounded px-3 py-2 text-xs outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-mono text-[10px] text-[#ab8987] uppercase">Orçamento (R$)</label>
+                    <input 
+                      type="number" 
+                      value={selectedLead.value}
+                      onChange={e => setSelectedLead({ ...selectedLead, value: e.target.value !== '' ? parseFloat(e.target.value) : '' })}
+                      className="w-full bg-[#111415] border border-[#2d2d2d] text-[#e1e3e4] rounded px-3 py-2 text-xs outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-mono text-[10px] text-[#ab8987] uppercase">Reclamação ou Sintomas Detalhados</label>
+                  <textarea 
+                    rows={4}
+                    value={selectedLead.description}
+                    onChange={e => setSelectedLead({ ...selectedLead, description: e.target.value })}
+                    className="w-full bg-[#111415] border border-[#2d2d2d] text-[#e1e3e4] rounded p-3 text-xs outline-none resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4 border-t border-zinc-800 justify-end">
+                  <button 
+                    onClick={() => setIsEditing(false)}
+                    className="border border-zinc-800 text-white font-mono text-xs py-2 px-4 rounded-lg hover:border-zinc-700"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    onClick={handleSaveLeadEdits}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-mono font-semibold text-xs py-2 px-5 rounded-lg uppercase tracking-wider"
+                  >
+                    Salvar Alterações
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                
+                {/* Visual spec checklist card */}
+                <div id="modal-spec-checklist" className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-zinc-950 p-4 rounded-xl border border-zinc-850">
+                  <div>
+                    <span className="font-mono text-[9px] text-zinc-500 block uppercase">VEÍCULO</span>
+                    <span className="text-xs font-bold text-white block mt-0.5">{selectedLead.vehicleBrand} {selectedLead.vehicleModel}</span>
+                  </div>
+                  <div>
+                    <span className="font-mono text-[9px] text-zinc-550 block uppercase">PLACA DE IDENTIFICAÇÃO</span>
+                    <span className="font-mono text-xs font-bold text-indigo-400 block mt-0.5">{selectedLead.vehiclePlate || 'NÃO ATRIBUÍDA'}</span>
+                  </div>
+                  <div>
+                    <span className="font-mono text-[9px] text-zinc-550 block uppercase">FAIXA DE ORÇAMENTO</span>
+                    <span className="font-mono text-xs font-bold text-white block mt-0.5">{formatBRL(selectedLead.value)}</span>
+                  </div>
+                  <div>
+                    <span className="font-mono text-[9px] text-zinc-550 block uppercase">CATEGORIA DE SERVIÇO</span>
+                    <span className="font-mono text-xs font-bold text-indigo-400 block mt-0.5 uppercase">{selectedLead.category}</span>
+                  </div>
+                </div>
+
+                {/* Patient / customer details contact panel */}
+                <div id="modal-customer-contact" className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-2 text-xs text-zinc-300">
+                    <Phone className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>{selectedLead.phone}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-zinc-300">
+                    <Mail className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>{selectedLead.email}</span>
+                  </div>
+                </div>
+
+                {/* Core description details */}
+                <div id="defect-disclaimer" className="space-y-2">
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-white border-b border-zinc-800 pb-2">CONDIÇÃO INFORMADA PELO CLIENTE</h4>
+                  <div className="p-3 bg-zinc-950 border border-zinc-850 rounded-lg text-xs leading-relaxed text-zinc-300 text-left">
+                    {selectedLead.description}
+                  </div>
+                </div>
+
+
+
+                {/* Bottom action controls */}
+                <div id="details-modal-controls" className="flex justify-between pt-6 border-t border-zinc-800">
+                  <button
+                    onClick={(e) => deleteLead(selectedLead.id, e)}
+                    className="border border-rose-500/30 hover:bg-rose-500/10 hover:border-rose-500 font-mono text-xs font-bold py-2 px-3 rounded-lg uppercase text-rose-400 transition-all flex items-center gap-1 cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Excluir Oportunidade
+                  </button>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="border border-zinc-800 hover:border-indigo-500 text-white font-mono text-xs py-2 px-5 rounded-lg uppercase tracking-wide transition-all cursor-pointer"
+                    >
+                      Editar Dados
+                    </button>
+                    {selectedLead.stage !== 'approved' && (
+                      <button
+                        onClick={() => {
+                          moveLead(selectedLead.id, 'next');
+                          setSelectedLead(null);
+                        }}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-mono font-bold text-xs py-2 px-5 rounded-lg uppercase tracking-widest transition-all cursor-pointer"
+                      >
+                        Avançar Pipeline
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {feedbackMsg && (
+        <div className="fixed bottom-6 right-6 bg-zinc-900 border-l-4 border-red-500 border-zinc-800 rounded-xl p-4 shadow-2xl flex items-center gap-3 z-50 animate-bounce">
+          <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+          <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">{feedbackMsg}</span>
+        </div>
+      )}
+
+    </div>
+  );
+}

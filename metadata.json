@@ -1,0 +1,6 @@
+{
+  "name": "MC Automecânica CRM",
+  "description": "Sistema de CRM automotivo com funil de vendas Kanban, faturamento de pátio e diagnósticos inteligentes assistidos por Inteligência Artificial (Gemini API).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
