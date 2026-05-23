@@ -294,7 +294,7 @@ export default function App() {
     const alreadyExists = serviceOrders.some(order => order.notes?.includes(lead.id));
     if (alreadyExists) return;
 
-    const generatedId = `OS-AUTO-${Date.now().toString().slice(-3)}`;
+    const generatedId = `OS-AUTO-${Date.now().toString().slice(-5)}-${Math.floor(100 + Math.random() * 900)}`;
     const agreedPrice = lead.value && Number(lead.value) > 0 ? Number(lead.value) : 1200.00;
 
     const autoCostItem = {
@@ -305,7 +305,7 @@ export default function App() {
 
     const newOS: ServiceOrder = {
       id: generatedId,
-      customerId: `CUST-AUTO-${Date.now().toString().slice(-3)}`,
+      customerId: `CUST-AUTO-${Date.now().toString().slice(-5)}-${Math.floor(100 + Math.random() * 900)}`,
       customerName: lead.name,
       vehicleBrand: lead.vehicleBrand,
       vehicleModel: lead.vehicleModel,
@@ -441,6 +441,8 @@ export default function App() {
               searchQuery={searchQuery}
               brandsList={brandsList}
               setBrandsList={setBrandsList}
+              leads={leads}
+              setLeads={setLeads}
             />
           )}
 

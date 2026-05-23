@@ -87,7 +87,7 @@ export default function InventoryView({
       return;
     }
 
-    const uniqueId = `STK-${Date.now().toString().slice(-3)}`;
+    const uniqueId = `STK-${Date.now().toString().slice(-5)}-${Math.floor(100 + Math.random() * 900)}`;
     const freshItem: InventoryItem = {
       id: uniqueId,
       name: newItemForm.name,

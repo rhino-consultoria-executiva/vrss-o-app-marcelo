@@ -8,9 +8,10 @@ import {
   X,
   CreditCard,
   UserCheck,
-  Trash2
+  Trash2,
+  Layers
 } from 'lucide-react';
-import { Customer } from '../types';
+import { Customer, Lead } from '../types';
 
 interface CustomerBaseViewProps {
   customers: Customer[];
@@ -18,6 +19,8 @@ interface CustomerBaseViewProps {
   searchQuery: string;
   brandsList: string[];
   setBrandsList: React.Dispatch<React.SetStateAction<string[]>>;
+  leads: Lead[];
+  setLeads: React.Dispatch<React.SetStateAction<Lead[]>>;
 }
 
 export default function CustomerBaseView({
@@ -25,7 +28,9 @@ export default function CustomerBaseView({
   setCustomers,
   searchQuery,
   brandsList,
-  setBrandsList
+  setBrandsList,
+  leads,
+  setLeads
 }: CustomerBaseViewProps) {
   // Navigation & Filtering States
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'VALOR' | 'RECENTE' | 'INATIVO'>('ALL');
@@ -35,6 +40,52 @@ export default function CustomerBaseView({
 
   // Deletion state
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+
+  // Addition to funnel modal state
+  const [customerForFunnel, setCustomerForFunnel] = useState<Customer | null>(null);
+  const [funnelForm, setFunnelForm] = useState({
+    description: '',
+    category: 'Diagnóstico' as Lead['category'],
+    value: '' as number | '',
+    priority: 'NORMAL' as Lead['priority'],
+    stage: 'leads' as Lead['stage'],
+  });
+  const [funnelFeedback, setFunnelFeedback] = useState<string | null>(null);
+
+  const handleAddToFunnelSubmit = () => {
+    if (!customerForFunnel) return;
+    const uniqueId = `LEAD-${Date.now().toString().slice(-5)}-${Math.floor(100 + Math.random() * 900)}`;
+    const newLead: Lead = {
+      id: uniqueId,
+      name: customerForFunnel.name,
+      email: customerForFunnel.email || `${customerForFunnel.name.toLowerCase().replace(/\s/g, '')}@email.com`,
+      phone: customerForFunnel.phone || '+55 11 99999-8888',
+      vehicleBrand: customerForFunnel.vehicleBrand || 'Veículo',
+      vehicleModel: customerForFunnel.vehicleModel || 'Modelo',
+      vehicleYear: customerForFunnel.vehicleYear || 2022,
+      vehiclePlate: customerForFunnel.vehiclePlate?.toUpperCase() || 'DEF-1234',
+      description: funnelForm.description || 'Oportunidade gerada através da base de clientes.',
+      category: funnelForm.category,
+      value: funnelForm.value,
+      priority: funnelForm.priority,
+      stage: funnelForm.stage,
+      dateCreated: 'Agora mesmo'
+    };
+
+    setLeads(prev => [newLead, ...prev]);
+    setFunnelFeedback(`Oportunidade criada para "${customerForFunnel.name}" no Funil de Vendas com sucesso!`);
+    setTimeout(() => {
+      setFunnelFeedback(null);
+      setCustomerForFunnel(null);
+      setFunnelForm({
+        description: '',
+        category: 'Diagnóstico',
+        value: '',
+        priority: 'NORMAL',
+        stage: 'leads',
+      });
+    }, 2000);
+  };
 
   // Brand adding inline state for filters
   const [isAddingBrandInFilter, setIsAddingBrandInFilter] = useState(false);
@@ -274,7 +325,7 @@ export default function CustomerBaseView({
                 <th className="py-4 min-w-[180px]">Dados de Contato</th>
                 <th className="py-4 text-right pr-12 min-w-[140px]">Soma Faturada</th>
                 <th className="py-4 text-center pr-6 min-w-[110px]">Status CRM</th>
-                <th className="py-4 text-center pr-6 min-w-[80px]">Ações</th>
+                <th className="py-4 text-center pr-6 min-w-[100px]">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -340,15 +391,34 @@ export default function CustomerBaseView({
                     </span>
                   </td>
 
-                  {/* Column 6: Delete action direct trigger */}
-                  <td className="py-5 text-center pr-6 align-middle" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      title="Excluir Cliente"
-                      onClick={() => setCustomerToDelete(customer)}
-                      className="p-1.5 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 backdrop-blur-xs rounded-lg transition-all cursor-pointer inline-flex items-center justify-center outline-none border border-transparent hover:border-red-500/25"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                  {/* Column 6: Actions */}
+                  <td className="py-5 text-center pr-4 align-middle" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <button
+                        title="Criar Oportunidade no Funil de Vendas"
+                        onClick={() => {
+                          setCustomerForFunnel(customer);
+                          setFunnelForm({
+                            description: `Oportunidade para ${customer.vehicleBrand} ${customer.vehicleModel}.`,
+                            category: 'Diagnóstico',
+                            value: '',
+                            priority: 'NORMAL',
+                            stage: 'leads',
+                          });
+                        }}
+                        className="p-1.5 text-zinc-400 hover:text-indigo-400 hover:bg-indigo-500/10 backdrop-blur-xs rounded-lg transition-all cursor-pointer inline-flex items-center justify-center outline-none border border-transparent hover:border-indigo-500/20"
+                      >
+                        <Layers className="w-3.5 h-3.5" />
+                      </button>
+                      
+                      <button
+                        title="Excluir Cliente"
+                        onClick={() => setCustomerToDelete(customer)}
+                        className="p-1.5 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 backdrop-blur-xs rounded-lg transition-all cursor-pointer inline-flex items-center justify-center outline-none border border-transparent hover:border-red-500/25"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
 
                 </tr>
@@ -577,6 +647,128 @@ export default function CustomerBaseView({
                 Sim, Excluir Cliente
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADICIONAR AO FUNIL / GERAR OPORTUNIDADE MODAL */}
+      {customerForFunnel && (
+        <div id="add-to-funnel-modal" className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-[100] animate-fade-in">
+          <div className="bg-zinc-900 border border-indigo-500/20 rounded-xl max-w-lg w-full p-6 text-left space-y-5 relative shadow-2xl">
+            <div className="flex justify-between items-start border-b border-zinc-800 pb-4">
+              <div>
+                <h4 className="font-semibold text-base text-white uppercase tracking-tight flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-indigo-400" />
+                  Gerar Oportunidade no Funil
+                </h4>
+                <p className="font-mono text-[9px] text-zinc-500 mt-1">Crie um lead para: {customerForFunnel.name}</p>
+              </div>
+              <button 
+                onClick={() => setCustomerForFunnel(null)}
+                className="w-8 h-8 rounded-lg bg-zinc-950 text-zinc-400 hover:text-white flex items-center justify-center border border-zinc-800 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {funnelFeedback ? (
+              <div className="bg-emerald-950/40 border border-emerald-500/20 text-emerald-400 p-4 rounded-xl text-center text-xs space-y-2 py-8">
+                <p className="font-bold font-mono text-[10px] uppercase tracking-wider">✔ Sucesso operacional</p>
+                <p>{funnelFeedback}</p>
+              </div>
+            ) : (
+              <div className="space-y-4 font-sans text-xs">
+                {/* Visual customer info banner */}
+                <div className="bg-zinc-950 p-3.5 rounded-lg border border-zinc-855 space-y-1 text-left">
+                  <p className="font-bold text-white text-sm">{customerForFunnel.name}</p>
+                  <p className="text-zinc-400 text-xs">
+                    {customerForFunnel.vehicleBrand} {customerForFunnel.vehicleModel} ({customerForFunnel.vehiclePlate}) - {customerForFunnel.phone}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="font-mono text-[10px] text-zinc-500 uppercase">Categoria</label>
+                    <select
+                      value={funnelForm.category}
+                      onChange={(e) => setFunnelForm({ ...funnelForm, category: e.target.value as Lead['category'] })}
+                      className="w-full bg-[#111415] border border-zinc-800 text-white rounded px-3 py-2 text-xs outline-none focus:border-indigo-500 font-sans"
+                    >
+                      <option value="Diagnóstico">Diagnóstico</option>
+                      <option value="Tuning">Tuning</option>
+                      <option value="Revisão">Revisão</option>
+                      <option value="Manutenção">Manutenção</option>
+                      <option value="Upgrade">Upgrade</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-mono text-[10px] text-zinc-500 uppercase">Etapa do Funil</label>
+                    <select
+                      value={funnelForm.stage}
+                      onChange={(e) => setFunnelForm({ ...funnelForm, stage: e.target.value as Lead['stage'] })}
+                      className="w-full bg-[#111415] border border-zinc-800 text-white rounded px-3 py-2 text-xs outline-none focus:border-indigo-500 font-sans"
+                    >
+                      <option value="leads">Novo Lead</option>
+                      <option value="quotes">Orçamento Enviado</option>
+                      <option value="negotiation font-sans">Negociação</option>
+                      <option value="approved">Serviço Aprovado</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="font-mono text-[10px] text-zinc-500 uppercase">Prioridade</label>
+                    <select
+                      value={funnelForm.priority}
+                      onChange={(e) => setFunnelForm({ ...funnelForm, priority: e.target.value as Lead['priority'] })}
+                      className="w-full bg-[#111415] border border-zinc-800 text-white rounded px-3 py-2 text-xs outline-none focus:border-indigo-500 font-sans"
+                    >
+                      <option value="NORMAL">NORMAL</option>
+                      <option value="ALTA">ALTA</option>
+                      <option value="URGENTE">URGENTE</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-mono text-[10px] text-zinc-500 uppercase">Valor Estimado (R$)</label>
+                    <input
+                      type="number"
+                      placeholder="Ex: 1200"
+                      value={funnelForm.value}
+                      onChange={(e) => setFunnelForm({ ...funnelForm, value: e.target.value !== '' ? parseFloat(e.target.value) : '' })}
+                      className="w-full bg-[#111415] border border-zinc-800 text-white rounded px-3 py-2 text-xs outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1 text-left">
+                  <label className="font-mono text-[10px] text-zinc-500 uppercase pb-1 block">Descrição dos Sintomas / Notas</label>
+                  <textarea
+                    placeholder="Quais os sintomas, observações ou queixas do cliente para este veículo?"
+                    value={funnelForm.description}
+                    onChange={(e) => setFunnelForm({ ...funnelForm, description: e.target.value })}
+                    className="w-full bg-[#111415] border border-zinc-800 text-white rounded px-3 py-2 text-xs outline-none focus:border-indigo-500 h-20 resize-none font-sans"
+                  />
+                </div>
+
+                <div className="flex gap-3 justify-end pt-2">
+                  <button
+                    onClick={() => setCustomerForFunnel(null)}
+                    className="border border-zinc-800 text-zinc-400 hover:text-white font-mono text-xs py-2 px-4 rounded-lg cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleAddToFunnelSubmit}
+                    className="bg-indigo-650 hover:bg-indigo-700 text-white font-mono font-bold text-xs py-2 px-5 rounded-lg uppercase tracking-wider cursor-pointer"
+                  >
+                    Adicionar no Funil
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -105,7 +105,7 @@ export default function SalesFunnelView({
       return;
     }
 
-    const uniqueId = `LEAD-${Date.now().toString().slice(-3)}`;
+    const uniqueId = `LEAD-${Date.now().toString().slice(-5)}-${Math.floor(100 + Math.random() * 900)}`;
     const freshLead: Lead = {
       id: uniqueId,
       name: newLeadForm.name,
@@ -199,6 +199,41 @@ export default function SalesFunnelView({
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
+
+                  {customers && customers.length > 0 && (
+                    <div className="space-y-1 text-left">
+                      <label className="font-mono text-[9px] text-zinc-500 uppercase block pl-0.5">Vincular Cliente da Base (Opcional)</label>
+                      <select
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val) {
+                            const found = customers.find(c => c.id === val);
+                            if (found) {
+                              setNewLeadForm(prev => ({
+                                ...prev,
+                                name: found.name,
+                                email: found.email || '',
+                                phone: found.phone || '',
+                                vehicleBrand: found.vehicleBrand || '',
+                                vehicleModel: found.vehicleModel || '',
+                                vehicleYear: found.vehicleYear || 2022,
+                                vehiclePlate: found.vehiclePlate || '',
+                              }));
+                            }
+                          }
+                        }}
+                        defaultValue=""
+                        className="w-full bg-[#111415] border border-zinc-800 text-zinc-300 rounded px-2.5 py-1.5 text-xs outline-none focus:border-indigo-500 font-sans cursor-pointer"
+                      >
+                        <option value="">-- Selecione um Cliente da Base --</option>
+                        {customers.map(c => (
+                          <option key={c.id} value={c.id} className="bg-[#111415]">
+                            {c.name} ({c.vehicleBrand} {c.vehicleModel})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   
                   <input
                     type="text"
