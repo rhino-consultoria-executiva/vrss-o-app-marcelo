@@ -22,7 +22,25 @@ import {
 } from './data/mockData';
 import { Customer, Lead, ServiceOrder, InventoryItem } from './types';
 import { HelpCircle, ShieldAlert, Check } from 'lucide-react';
-import { dbService, isSupabaseConfigured } from './supabase';
+import { 
+  dbService, 
+  isSupabaseConfigured, 
+  getSupabaseConfig, 
+  saveCustomSupabaseConfig, 
+  clearCustomSupabaseConfig 
+} from './supabase';
+
+function deduplicateById<T extends { id: string }>(array: T[]): T[] {
+  const seen = new Set<string>();
+  return array.filter(item => {
+    if (!item || !item.id) return false;
+    if (seen.has(item.id)) {
+      return false;
+    }
+    seen.add(item.id);
+    return true;
+  });
+}
 
 export default function App() {
   // Authentication states backed by localStorage persistence
@@ -72,6 +90,61 @@ export default function App() {
   // Synchronization tracks and configs
   const [dbSource, setDbSource] = useState<'Supabase' | 'LocalStorage'>('LocalStorage');
   const isInitialLoadCompleted = useRef(false);
+
+  // Custom Supabase connector states
+  const [customSupabaseUrl, setCustomSupabaseUrl] = useState(() => getSupabaseConfig().url);
+  const [customSupabaseKey, setCustomSupabaseKey] = useState(() => getSupabaseConfig().key);
+  const [supabaseLoading, setSupabaseLoading] = useState(false);
+  const [supabaseStatusMsg, setSupabaseStatusMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  const handleConnectSupabase = async (urlStr: string, keyStr: string) => {
+    setSupabaseLoading(true);
+    setSupabaseStatusMsg(null);
+    try {
+      saveCustomSupabaseConfig(urlStr, keyStr);
+      
+      if (isSupabaseConfigured()) {
+        const cloudCust = deduplicateById(await dbService.getCustomers());
+        const cloudLeads = deduplicateById(await dbService.getLeads());
+        const cloudOrders = deduplicateById(await dbService.getServiceOrders());
+        const cloudInv = deduplicateById(await dbService.getInventory());
+
+        setCustomersRaw(cloudCust);
+        setLeadsRaw(cloudLeads);
+        setServiceOrdersRaw(cloudOrders);
+        setInventoryRaw(cloudInv);
+
+        setDbSource('Supabase');
+        setSupabaseStatusMsg({
+          type: 'success',
+          text: 'Conexão estabelecida! O CRM foi sincronizado com as tabelas do novo Supabase.'
+        });
+        setAppToast('Nova conexão com Supabase ativa!');
+        setTimeout(() => setAppToast(null), 4000);
+      } else {
+        throw new Error('Chaves vazias ou inválidas.');
+      }
+    } catch (e: any) {
+      console.error(e);
+      setDbSource('LocalStorage');
+      setSupabaseStatusMsg({
+        type: 'error',
+        text: `Erro ao conectar: ${e.message || 'Verifique as tabelas e políticas RLS no seu projeto. Retornando ao LocalStorage Offline.'}`
+      });
+      setAppToast('Conexão ao Supabase falhou!');
+      setTimeout(() => setAppToast(null), 4000);
+    } finally {
+      setSupabaseLoading(false);
+    }
+  };
+
+  const handleClearCustomSupabase = () => {
+    clearCustomSupabaseConfig();
+    const { url, key } = getSupabaseConfig();
+    setCustomSupabaseUrl(url);
+    setCustomSupabaseKey(key);
+    handleConnectSupabase(url, key);
+  };
 
   // Delta syncer callbacks
   const syncCustomersToSupabase = async (prev: Customer[], next: Customer[]) => {
@@ -157,7 +230,8 @@ export default function App() {
   // Intercepting setters matching standard dispatch hooks
   const setCustomers = (val: React.SetStateAction<Customer[]>) => {
     setCustomersRaw(prev => {
-      const nextVal = typeof val === 'function' ? val(prev) : val;
+      const rawNext = typeof val === 'function' ? (val as any)(prev) : val;
+      const nextVal = deduplicateById<Customer>(rawNext);
       localStorage.setItem('mc_crm_customers', JSON.stringify(nextVal));
       if (isSupabaseConfigured() && isInitialLoadCompleted.current) {
         syncCustomersToSupabase(prev, nextVal);
@@ -168,7 +242,8 @@ export default function App() {
 
   const setLeads = (val: React.SetStateAction<Lead[]>) => {
     setLeadsRaw(prev => {
-      const nextVal = typeof val === 'function' ? val(prev) : val;
+      const rawNext = typeof val === 'function' ? (val as any)(prev) : val;
+      const nextVal = deduplicateById<Lead>(rawNext);
       localStorage.setItem('mc_crm_leads', JSON.stringify(nextVal));
       if (isSupabaseConfigured() && isInitialLoadCompleted.current) {
         syncLeadsToSupabase(prev, nextVal);
@@ -179,7 +254,8 @@ export default function App() {
 
   const setServiceOrders = (val: React.SetStateAction<ServiceOrder[]>) => {
     setServiceOrdersRaw(prev => {
-      const nextVal = typeof val === 'function' ? val(prev) : val;
+      const rawNext = typeof val === 'function' ? (val as any)(prev) : val;
+      const nextVal = deduplicateById<ServiceOrder>(rawNext);
       localStorage.setItem('mc_crm_service_orders', JSON.stringify(nextVal));
       if (isSupabaseConfigured() && isInitialLoadCompleted.current) {
         syncServiceOrdersToSupabase(prev, nextVal);
@@ -190,7 +266,8 @@ export default function App() {
 
   const setInventory = (val: React.SetStateAction<InventoryItem[]>) => {
     setInventoryRaw(prev => {
-      const nextVal = typeof val === 'function' ? val(prev) : val;
+      const rawNext = typeof val === 'function' ? (val as any)(prev) : val;
+      const nextVal = deduplicateById<InventoryItem>(rawNext);
       localStorage.setItem('mc_crm_inventory', JSON.stringify(nextVal));
       if (isSupabaseConfigured() && isInitialLoadCompleted.current) {
         syncInventoryToSupabase(prev, nextVal);
@@ -204,10 +281,10 @@ export default function App() {
     async function loadCrmData() {
       if (isSupabaseConfigured()) {
         try {
-          const cloudCust = await dbService.getCustomers();
-          const cloudLeads = await dbService.getLeads();
-          const cloudOrders = await dbService.getServiceOrders();
-          const cloudInv = await dbService.getInventory();
+          const cloudCust = deduplicateById(await dbService.getCustomers());
+          const cloudLeads = deduplicateById(await dbService.getLeads());
+          const cloudOrders = deduplicateById(await dbService.getServiceOrders());
+          const cloudInv = deduplicateById(await dbService.getInventory());
 
           setCustomersRaw(cloudCust);
           setLeadsRaw(cloudLeads);
@@ -239,25 +316,25 @@ export default function App() {
       const cachedOrders = localStorage.getItem('mc_crm_service_orders');
       const cachedInv = localStorage.getItem('mc_crm_inventory');
 
-      if (cachedCust) setCustomersRaw(JSON.parse(cachedCust));
+      if (cachedCust) setCustomersRaw(deduplicateById(JSON.parse(cachedCust)));
       else {
         setCustomersRaw(INITIAL_CUSTOMERS);
         localStorage.setItem('mc_crm_customers', JSON.stringify(INITIAL_CUSTOMERS));
       }
 
-      if (cachedLeads) setLeadsRaw(JSON.parse(cachedLeads));
+      if (cachedLeads) setLeadsRaw(deduplicateById(JSON.parse(cachedLeads)));
       else {
         setLeadsRaw(INITIAL_LEADS);
         localStorage.setItem('mc_crm_leads', JSON.stringify(INITIAL_LEADS));
       }
 
-      if (cachedOrders) setServiceOrdersRaw(JSON.parse(cachedOrders));
+      if (cachedOrders) setServiceOrdersRaw(deduplicateById(JSON.parse(cachedOrders)));
       else {
         setServiceOrdersRaw(INITIAL_SERVICE_ORDERS);
         localStorage.setItem('mc_crm_service_orders', JSON.stringify(INITIAL_SERVICE_ORDERS));
       }
 
-      if (cachedInv) setInventoryRaw(JSON.parse(cachedInv));
+      if (cachedInv) setInventoryRaw(deduplicateById(JSON.parse(cachedInv)));
       else {
         setInventoryRaw(INITIAL_INVENTORY);
         localStorage.setItem('mc_crm_inventory', JSON.stringify(INITIAL_INVENTORY));
@@ -487,6 +564,8 @@ export default function App() {
           {activeSection === 'settings' && (
             <div className="p-8 max-w-2xl text-left space-y-6">
               <h2 className="text-xl font-semibold text-white tracking-tight">Configurações Base do CRM</h2>
+              
+              {/* Core options overview card */}
               <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl space-y-5">
                 <div className="flex items-center gap-3">
                   <span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
@@ -522,13 +601,6 @@ export default function App() {
                     <p className="text-xs text-zinc-400 leading-relaxed font-sans">
                       O sistema vem preparado com suporte nativo e migrações SQL completas para <strong>Supabase (PostgreSQL)</strong>. No momento, o app está operando em modo offline persistindo dados diretamente no navegador via <code className="text-zinc-300 font-mono bg-zinc-900 px-1 py-0.5 rounded">localStorage</code> para que você não perca seu trabalho.
                     </p>
-                    <div className="bg-zinc-900/60 p-3 rounded-lg border border-zinc-850 space-y-1.5 font-mono text-[10px] text-zinc-500 mt-2">
-                      <p className="text-zinc-400 font-bold">Como Conectar seu Supabase Cloud:</p>
-                      <p>1. Crie um projeto no Supabase e execute as migrações em <code className="text-zinc-300 font-sans">/supabase/migrations/</code></p>
-                      <p>2. Configure as seguintes chaves nas variáveis de ambiente do projeto (.env):</p>
-                      <p className="pl-3 text-white">VITE_SUPABASE_URL= &quot;sua-url-do-supabase&quot;</p>
-                      <p className="pl-3 text-white">VITE_SUPABASE_ANON_KEY= &quot;sua-chave-anon-key&quot;</p>
-                    </div>
                   </div>
                 )}
 
@@ -543,6 +615,77 @@ export default function App() {
                     </p>
                   </div>
                 )}
+              </div>
+
+              {/* Dynamic Connection Settings Form to Swap Supabase instances */}
+              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl space-y-5">
+                <div>
+                  <h3 className="text-sm font-semibold text-white uppercase tracking-tight">Conectar a Outro Supabase</h3>
+                  <p className="text-[11px] text-zinc-400 mt-1">Preencha as chaves abaixo para redirecionar este CRM para uma base de dados diferente.</p>
+                </div>
+
+                <div className="space-y-4 font-sans text-xs">
+                  <div className="space-y-1.5">
+                    <label className="font-mono text-[10px] text-zinc-500 uppercase">Supabase Project URL</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: https://your-project.supabase.co"
+                      value={customSupabaseUrl}
+                      onChange={(e) => setCustomSupabaseUrl(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-800 text-zinc-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-mono text-[10px] text-zinc-500 uppercase">Supabase Anon Key / Publishable Key</label>
+                    <input
+                      type="password"
+                      placeholder="Ex: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                      value={customSupabaseKey}
+                      onChange={(e) => setCustomSupabaseKey(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-800 text-zinc-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500 font-mono text-[10px]"
+                    />
+                  </div>
+
+                  {supabaseStatusMsg && (
+                    <div className={`p-4 rounded-xl text-xs border ${
+                      supabaseStatusMsg.type === 'success' 
+                        ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/20' 
+                        : 'bg-red-950/40 text-red-400 border-red-500/20'
+                    }`}>
+                      <p className="font-bold uppercase tracking-wider text-[9px] font-mono mb-1">
+                        {supabaseStatusMsg.type === 'success' ? '✓ Sucesso de Integração' : '✗ Falha de Conexão'}
+                      </p>
+                      <p>{supabaseStatusMsg.text}</p>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center pt-2">
+                    <button
+                      type="button"
+                      onClick={handleClearCustomSupabase}
+                      disabled={supabaseLoading}
+                      className="text-zinc-500 hover:text-white font-mono text-[10px] uppercase tracking-wider py-1.5 px-3 rounded border border-zinc-800 hover:bg-zinc-950 cursor-pointer disabled:opacity-50 transition-all"
+                    >
+                      Restaurar Padrão
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => handleConnectSupabase(customSupabaseUrl, customSupabaseKey)}
+                      disabled={supabaseLoading}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-mono font-bold text-[10px] uppercase tracking-widest py-2 px-5 rounded-lg disabled:opacity-50 transition-all cursor-pointer flex items-center gap-2"
+                    >
+                      {supabaseLoading ? 'Conectando...' : 'Aplicar Integração'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-zinc-950/50 p-4 rounded-lg border border-zinc-800 space-y-1.5 text-[11px] text-zinc-500 font-sans leading-relaxed">
+                  <p className="text-zinc-400 font-semibold uppercase tracking-wider font-mono text-[9px]">Instruções para o novo banco de dados:</p>
+                  <p>1. Certifique-se de que as tabelas de dados (<code className="text-zinc-300 font-mono bg-zinc-900 px-0.5 rounded">customers</code>, <code className="text-zinc-300 font-mono bg-zinc-900 px-0.5 rounded">leads</code>, <code className="text-zinc-300 font-mono bg-zinc-900 px-0.5 rounded">service_orders</code> e <code className="text-zinc-300 font-mono bg-zinc-900 px-0.5 rounded">inventory</code>) foram criadas adequadamente rodando o arquivo SQL contido em <code className="text-zinc-300 font-sans">/supabase/migrations/</code> no SQL Editor do seu novo painel Supabase.</p>
+                  <p>2. Configure devidamente as permissões RLS (Row Level Security) ou utilize as políticas providenciadas para permitir leitura e escrita livre.</p>
+                </div>
               </div>
             </div>
           )}

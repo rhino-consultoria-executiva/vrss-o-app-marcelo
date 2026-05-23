@@ -1,30 +1,27 @@
 import { createClient } from '@supabase/supabase-js';
 import { Customer, Lead, ServiceOrder, InventoryItem } from './types';
 
-const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL || (import.meta as any).env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY || 
-                        (import.meta as any).env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 
-                        (import.meta as any).env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+export const getSupabaseConfig = () => {
+  const localUrl = typeof window !== 'undefined' ? localStorage.getItem('custom_supabase_url') : null;
+  const localKey = typeof window !== 'undefined' ? localStorage.getItem('custom_supabase_anon_key') : null;
+  
+  const url = localUrl || (import.meta as any).env.VITE_SUPABASE_URL || (import.meta as any).env.NEXT_PUBLIC_SUPABASE_URL || 'https://ypnqbeakaqyvmxechyte.supabase.co';
+  const key = localKey || (import.meta as any).env.VITE_SUPABASE_ANON_KEY || 
+              (import.meta as any).env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 
+              (import.meta as any).env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_fobt4xhX_BtDwI56oonyyw_Hzl-GStb';
+  return { url: url.trim(), key: key.trim() };
+};
 
-// Check if credentials are properly filled and are not standard placeholders
 export const isSupabaseConfigured = (): boolean => {
-  if (!supabaseUrl || !supabaseAnonKey) return false;
-  if (
-    supabaseUrl.includes('your-supabase-project') || 
-    supabaseAnonKey.includes('your-anon-role') ||
-    supabaseUrl.trim() === '' ||
-    supabaseAnonKey.trim() === ''
-  ) {
-    return false;
-  }
-  return true;
+  const { url, key } = getSupabaseConfig();
+  return !!url && !!key && url.trim() !== '' && key.trim() !== '';
 };
 
 // Lazy instance holder
 let supabaseInstance: any = null;
 
 export const supabase = isSupabaseConfigured() 
-  ? createClient(supabaseUrl, supabaseAnonKey) 
+  ? createClient(getSupabaseConfig().url, getSupabaseConfig().key) 
   : null;
 
 // Helper to get client or trigger fallback alert safely
@@ -32,10 +29,36 @@ export const getSupabaseClient = () => {
   if (!isSupabaseConfigured()) {
     return null;
   }
-  if (!supabaseInstance && supabaseUrl && supabaseAnonKey) {
-    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+  const { url, key } = getSupabaseConfig();
+  if (!supabaseInstance || (supabaseInstance as any).supabaseUrl !== url || (supabaseInstance as any).supabaseKey !== key) {
+    supabaseInstance = createClient(url, key);
   }
   return supabaseInstance;
+};
+
+export const saveCustomSupabaseConfig = (url: string, key: string) => {
+  if (typeof window !== 'undefined') {
+    if (url.trim()) {
+      localStorage.setItem('custom_supabase_url', url.trim());
+    } else {
+      localStorage.removeItem('custom_supabase_url');
+    }
+    
+    if (key.trim()) {
+      localStorage.setItem('custom_supabase_anon_key', key.trim());
+    } else {
+      localStorage.removeItem('custom_supabase_anon_key');
+    }
+  }
+  supabaseInstance = null;
+};
+
+export const clearCustomSupabaseConfig = () => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('custom_supabase_url');
+    localStorage.removeItem('custom_supabase_anon_key');
+  }
+  supabaseInstance = null;
 };
 
 // -------------------------------------------------------------
