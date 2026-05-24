@@ -24,18 +24,12 @@ import { Customer, Lead, ServiceOrder, InventoryItem, FunnelStage } from './type
 
 const DEFAULT_FUNNEL_STAGES: FunnelStage[] = [
   { id: 'leads', title: 'Novo Lead', color: '#818cf8' },
-  { id: 'quotes', title: 'Orçamento Enviado', color: '#6366f1' },
-  { id: 'negotiation', title: 'Negociação', color: '#a5b4fc' },
-  { id: 'approved', title: 'Serviço Aprovado', color: '#10b981' }
+  { id: 'quotes', title: 'OrÃ§amento Enviado', color: '#6366f1' },
+  { id: 'negotiation', title: 'NegociaÃ§Ã£o', color: '#a5b4fc' },
+  { id: 'approved', title: 'ServiÃ§o Aprovado', color: '#10b981' }
 ];
 import { HelpCircle, ShieldAlert, Check } from 'lucide-react';
-import { 
-  dbService, 
-  isSupabaseConfigured, 
-  getSupabaseConfig, 
-  saveCustomSupabaseConfig, 
-  clearCustomSupabaseConfig 
-} from './supabase';
+import { dbService } from './supabase';
 
 function deduplicateById<T extends { id: string }>(array: T[]): T[] {
   const seen = new Set<string>();
@@ -96,66 +90,10 @@ export default function App() {
   const [funnelStages, setFunnelStagesRaw] = useState<FunnelStage[]>(DEFAULT_FUNNEL_STAGES);
 
   // Synchronization tracks and configs
-  const [dbSource, setDbSource] = useState<'Supabase' | 'LocalStorage'>('LocalStorage');
   const isInitialLoadCompleted = useRef(false);
 
-  // Custom Supabase connector states
-  const [customSupabaseUrl, setCustomSupabaseUrl] = useState(() => getSupabaseConfig().url);
-  const [customSupabaseKey, setCustomSupabaseKey] = useState(() => getSupabaseConfig().key);
-  const [supabaseLoading, setSupabaseLoading] = useState(false);
-  const [supabaseStatusMsg, setSupabaseStatusMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-
-  const handleConnectSupabase = async (urlStr: string, keyStr: string) => {
-    setSupabaseLoading(true);
-    setSupabaseStatusMsg(null);
-    try {
-      saveCustomSupabaseConfig(urlStr, keyStr);
-      
-      if (isSupabaseConfigured()) {
-        const cloudCust = deduplicateById(await dbService.getCustomers());
-        const cloudLeads = deduplicateById(await dbService.getLeads());
-        const cloudOrders = deduplicateById(await dbService.getServiceOrders());
-        const cloudInv = deduplicateById(await dbService.getInventory());
-
-        setCustomersRaw(cloudCust);
-        setLeadsRaw(cloudLeads);
-        setServiceOrdersRaw(cloudOrders);
-        setInventoryRaw(cloudInv);
-
-        setDbSource('Supabase');
-        setSupabaseStatusMsg({
-          type: 'success',
-          text: 'Conexão estabelecida! O CRM foi sincronizado com as tabelas do novo Supabase.'
-        });
-        setAppToast('Nova conexão com Supabase ativa!');
-        setTimeout(() => setAppToast(null), 4000);
-      } else {
-        throw new Error('Chaves vazias ou inválidas.');
-      }
-    } catch (e: any) {
-      console.error(e);
-      setDbSource('LocalStorage');
-      setSupabaseStatusMsg({
-        type: 'error',
-        text: `Erro ao conectar: ${e.message || 'Verifique as tabelas e políticas RLS no seu projeto. Retornando ao LocalStorage Offline.'}`
-      });
-      setAppToast('Conexão ao Supabase falhou!');
-      setTimeout(() => setAppToast(null), 4000);
-    } finally {
-      setSupabaseLoading(false);
-    }
-  };
-
-  const handleClearCustomSupabase = () => {
-    clearCustomSupabaseConfig();
-    const { url, key } = getSupabaseConfig();
-    setCustomSupabaseUrl(url);
-    setCustomSupabaseKey(key);
-    handleConnectSupabase(url, key);
-  };
-
   // Delta syncer callbacks
-  const syncCustomersToSupabase = async (prev: Customer[], next: Customer[]) => {
+  const syncCustomers = async (prev: Customer[], next: Customer[]) => {
     try {
       const nextIds = new Set(next.map(c => c.id));
       const deleted = prev.filter(c => !nextIds.has(c.id));
@@ -175,7 +113,7 @@ export default function App() {
     }
   };
 
-  const syncLeadsToSupabase = async (prev: Lead[], next: Lead[]) => {
+  const syncLeads = async (prev: Lead[], next: Lead[]) => {
     try {
       const nextIds = new Set(next.map(l => l.id));
       const deleted = prev.filter(l => !nextIds.has(l.id));
@@ -195,7 +133,7 @@ export default function App() {
     }
   };
 
-  const syncServiceOrdersToSupabase = async (prev: ServiceOrder[], next: ServiceOrder[]) => {
+  const syncServiceOrders = async (prev: ServiceOrder[], next: ServiceOrder[]) => {
     try {
       const nextIds = new Set(next.map(o => o.id));
       const deleted = prev.filter(o => !nextIds.has(o.id));
@@ -211,11 +149,11 @@ export default function App() {
         await dbService.upsertServiceOrder(o);
       }
     } catch (e) {
-      console.error('Erro ao sincronizar ordens de serviço:', e);
+      console.error('Erro ao sincronizar ordens de serviÃ§o:', e);
     }
   };
 
-  const syncInventoryToSupabase = async (prev: InventoryItem[], next: InventoryItem[]) => {
+  const syncInventory = async (prev: InventoryItem[], next: InventoryItem[]) => {
     try {
       const nextIds = new Set(next.map(i => i.id));
       const deleted = prev.filter(i => !nextIds.has(i.id));
@@ -241,8 +179,8 @@ export default function App() {
       const rawNext = typeof val === 'function' ? (val as any)(prev) : val;
       const nextVal = deduplicateById<Customer>(rawNext);
       localStorage.setItem('mc_crm_customers', JSON.stringify(nextVal));
-      if (isSupabaseConfigured() && isInitialLoadCompleted.current) {
-        syncCustomersToSupabase(prev, nextVal);
+      if (isInitialLoadCompleted.current) {
+        syncCustomers(prev, nextVal);
       }
       return nextVal;
     });
@@ -253,8 +191,8 @@ export default function App() {
       const rawNext = typeof val === 'function' ? (val as any)(prev) : val;
       const nextVal = deduplicateById<Lead>(rawNext);
       localStorage.setItem('mc_crm_leads', JSON.stringify(nextVal));
-      if (isSupabaseConfigured() && isInitialLoadCompleted.current) {
-        syncLeadsToSupabase(prev, nextVal);
+      if (isInitialLoadCompleted.current) {
+        syncLeads(prev, nextVal);
       }
       return nextVal;
     });
@@ -265,8 +203,8 @@ export default function App() {
       const rawNext = typeof val === 'function' ? (val as any)(prev) : val;
       const nextVal = deduplicateById<ServiceOrder>(rawNext);
       localStorage.setItem('mc_crm_service_orders', JSON.stringify(nextVal));
-      if (isSupabaseConfigured() && isInitialLoadCompleted.current) {
-        syncServiceOrdersToSupabase(prev, nextVal);
+      if (isInitialLoadCompleted.current) {
+        syncServiceOrders(prev, nextVal);
       }
       return nextVal;
     });
@@ -277,14 +215,14 @@ export default function App() {
       const rawNext = typeof val === 'function' ? (val as any)(prev) : val;
       const nextVal = deduplicateById<InventoryItem>(rawNext);
       localStorage.setItem('mc_crm_inventory', JSON.stringify(nextVal));
-      if (isSupabaseConfigured() && isInitialLoadCompleted.current) {
-        syncInventoryToSupabase(prev, nextVal);
+      if (isInitialLoadCompleted.current) {
+        syncInventory(prev, nextVal);
       }
       return nextVal;
     });
   };
 
-  const syncFunnelStagesToSupabase = async (prev: FunnelStage[], next: FunnelStage[]) => {
+  const syncFunnelStages = async (prev: FunnelStage[], next: FunnelStage[]) => {
     try {
       const nextIds = new Set(next.map(s => s.id));
       const deleted = prev.filter(s => !nextIds.has(s.id));
@@ -292,14 +230,14 @@ export default function App() {
         try {
           await dbService.deleteFunnelStage(s.id);
         } catch (err) {
-          console.warn('Erro ao deletar etapa no Supabase, ignorando:', err);
+          console.warn('Erro ao deletar etapa, ignorando:', err);
         }
       }
       for (let i = 0; i < next.length; i++) {
         try {
           await dbService.upsertFunnelStage(next[i], i);
         } catch (err) {
-          console.warn('Erro ao salvar etapa no Supabase, ignorando:', err);
+          console.warn('Erro ao salvar etapa, ignorando:', err);
         }
       }
     } catch (e) {
@@ -311,8 +249,8 @@ export default function App() {
     setFunnelStagesRaw(prev => {
       const nextVal = typeof val === 'function' ? (val as any)(prev) : val;
       localStorage.setItem('mc_crm_funnel_stages', JSON.stringify(nextVal));
-      if (isSupabaseConfigured() && isInitialLoadCompleted.current) {
-        syncFunnelStagesToSupabase(prev, nextVal);
+      if (isInitialLoadCompleted.current) {
+        syncFunnelStages(prev, nextVal);
       }
       return nextVal;
     });
@@ -321,7 +259,7 @@ export default function App() {
   // Initial loader effect running on mount / authentication changes
   useEffect(() => {
     async function loadCrmData() {
-      if (isSupabaseConfigured()) {
+      if (true) {
         try {
           const cloudCust = deduplicateById(await dbService.getCustomers());
           const cloudLeads = deduplicateById(await dbService.getLeads());
@@ -333,7 +271,7 @@ export default function App() {
           try {
             cloudStages = await dbService.getFunnelStages();
           } catch (err) {
-            console.warn('Tabela funnel_stages inacessível ou vazia, usando backup local. Err:', err);
+            console.warn('Tabela funnel_stages inacessÃ­vel ou vazia, usando backup local. Err:', err);
           }
 
           if (cloudStages.length === 0) {
@@ -345,7 +283,7 @@ export default function App() {
                 await dbService.upsertFunnelStage(cloudStages[i], i);
               }
             } catch (err) {
-              console.warn('Falhou ao salvar stages padrão no cloud:', err);
+              console.warn('Falhou ao salvar stages padrÃ£o no cloud:', err);
             }
           }
 
@@ -354,7 +292,7 @@ export default function App() {
           setServiceOrdersRaw(cloudOrders);
           setInventoryRaw(cloudInv);
           setFunnelStagesRaw(cloudStages);
-          setDbSource('Supabase');
+          setDbSource('localStorage');
 
           // Hot backup local storage syncing
           localStorage.setItem('mc_crm_customers', JSON.stringify(cloudCust));
@@ -363,7 +301,7 @@ export default function App() {
           localStorage.setItem('mc_crm_inventory', JSON.stringify(cloudInv));
           localStorage.setItem('mc_crm_funnel_stages', JSON.stringify(cloudStages));
         } catch (e) {
-          console.warn('Supabase offline or table missing, using localStorage fallback. Err:', e);
+          console.warn('Erro ao carregar dados do storage:', e);
           loadFromLocalStorage();
         } finally {
           isInitialLoadCompleted.current = true;
@@ -459,12 +397,12 @@ export default function App() {
       vehicleBrand: lead.vehicleBrand,
       vehicleModel: lead.vehicleModel,
       vehiclePlate: lead.vehiclePlate || 'ABC-1234',
-      description: `Upgrade de performance / Diagnóstico do funil (${lead.category})`,
+      description: `Upgrade de performance / DiagnÃ³stico do funil (${lead.category})`,
       status: 'execucao', // puts immediately into action status
       totalValue: agreedPrice,
       items: [autoCostItem],
       dateCreated: new Date().toISOString().split('T')[0],
-      notes: `Conversão automática de Oportunidade Ref: ${lead.id}. ${lead.description}`
+      notes: `ConversÃ£o automÃ¡tica de Oportunidade Ref: ${lead.id}. ${lead.description}`
     };
 
     // Update state lists
@@ -620,153 +558,6 @@ export default function App() {
               setServiceOrders={setServiceOrders}
             />
           )}
-
-          {/* Central Utilities Support section */}
-          {activeSection === 'support' && (
-            <div className="p-8 max-w-2xl text-left space-y-6">
-              <h2 className="text-xl font-semibold text-white tracking-tight">Suporte Técnico Interno</h2>
-              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl space-y-4">
-                <HelpCircle className="w-8 h-8 text-red-500" />
-                <p className="text-sm leading-relaxed text-zinc-300">MC Automecânica CRM está operando via contêineres Cloud na infraestrutura segura. Caso tenha alguma dúvida ou falha com o sistema, entre em contato com seu administrador de sistema local.</p>
-                <div className="font-mono text-[11px] text-zinc-500 space-y-1">
-                  <p>SERVIDOR API: <span className="text-emerald-400">Ativo</span></p>
-                  <p>TELEMETRIA DA OFICINA: <span className="text-emerald-400">Operante</span></p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Configuration Settings Panel */}
-          {activeSection === 'settings' && (
-            <div className="p-8 max-w-2xl text-left space-y-6">
-              <h2 className="text-xl font-semibold text-white tracking-tight">Configurações Base do CRM</h2>
-              
-              {/* Core options overview card */}
-              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl space-y-5">
-                <div className="flex items-center gap-3">
-                  <span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
-                  <p className="text-sm text-white font-bold uppercase tracking-wider">SISTEMA INTEGRADO OPERANTE</p>
-                </div>
-                <div className="space-y-3.5">
-                  <div className="flex justify-between items-center text-xs pb-3 border-b border-zinc-800">
-                    <span>Conversão Automática de Leads em O.S.</span>
-                    <span className="font-bold text-emerald-400 flex items-center gap-1"><Check className="w-4 h-4" /> ATIVO</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs pb-3 border-b border-zinc-800">
-                    <span>Notificações Sonoras de Alertas no Pátio</span>
-                    <span className="text-zinc-500">Desativado</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs pb-3 border-b border-zinc-800">
-                    <span>Banco de Dados Principal</span>
-                    <span className={`font-mono text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider border ${
-                      dbSource === 'Supabase' 
-                        ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/20' 
-                        : 'bg-amber-950/40 text-amber-500 border-amber-500/20'
-                    }`}>
-                      {dbSource === 'Supabase' ? 'Supabase Cloud (Ativo)' : 'LocalStorage Offline'}
-                    </span>
-                  </div>
-                </div>
-
-                {dbSource === 'LocalStorage' && (
-                  <div className="bg-zinc-950/55 border border-amber-500/10 p-5 rounded-xl space-y-2.5 mt-3 animate-fade-in text-left">
-                    <p className="font-mono text-[9px] text-amber-500 font-bold uppercase tracking-widest flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                      Banco de Dados Local Ativo
-                    </p>
-                    <p className="text-xs text-zinc-400 leading-relaxed font-sans">
-                      O sistema vem preparado com suporte nativo e migrações SQL completas para <strong>Supabase (PostgreSQL)</strong>. No momento, o app está operando em modo offline persistindo dados diretamente no navegador via <code className="text-zinc-300 font-mono bg-zinc-900 px-1 py-0.5 rounded">localStorage</code> para que você não perca seu trabalho.
-                    </p>
-                  </div>
-                )}
-
-                {dbSource === 'Supabase' && (
-                  <div className="bg-zinc-950/55 border border-emerald-500/10 p-5 rounded-xl space-y-2.5 mt-3 animate-fade-in text-left">
-                    <p className="font-mono text-[9px] text-emerald-400 font-bold uppercase tracking-widest flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                      Conexão em Nuvem Estabelecida!
-                    </p>
-                    <p className="text-xs text-zinc-400 leading-relaxed font-sans">
-                      Todas as inserções, remoções e alterações de Clientes, Oportunidades (Leads), Ordens de Serviço e Peças no Estoque estão sendo persistidas e sincronizadas em tempo real no seu banco de dados PostgreSQL hospedado no Supabase Cloud.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Dynamic Connection Settings Form to Swap Supabase instances */}
-              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl space-y-5">
-                <div>
-                  <h3 className="text-sm font-semibold text-white uppercase tracking-tight">Conectar a Outro Supabase</h3>
-                  <p className="text-[11px] text-zinc-400 mt-1">Preencha as chaves abaixo para redirecionar este CRM para uma base de dados diferente.</p>
-                </div>
-
-                <div className="space-y-4 font-sans text-xs">
-                  <div className="space-y-1.5">
-                    <label className="font-mono text-[10px] text-zinc-500 uppercase">Supabase Project URL</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: https://your-project.supabase.co"
-                      value={customSupabaseUrl}
-                      onChange={(e) => setCustomSupabaseUrl(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 text-zinc-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="font-mono text-[10px] text-zinc-500 uppercase">Supabase Anon Key / Publishable Key</label>
-                    <input
-                      type="password"
-                      placeholder="Ex: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                      value={customSupabaseKey}
-                      onChange={(e) => setCustomSupabaseKey(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 text-zinc-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500 font-mono text-[10px]"
-                    />
-                  </div>
-
-                  {supabaseStatusMsg && (
-                    <div className={`p-4 rounded-xl text-xs border ${
-                      supabaseStatusMsg.type === 'success' 
-                        ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/20' 
-                        : 'bg-red-950/40 text-red-400 border-red-500/20'
-                    }`}>
-                      <p className="font-bold uppercase tracking-wider text-[9px] font-mono mb-1">
-                        {supabaseStatusMsg.type === 'success' ? '✓ Sucesso de Integração' : '✗ Falha de Conexão'}
-                      </p>
-                      <p>{supabaseStatusMsg.text}</p>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between items-center pt-2">
-                    <button
-                      type="button"
-                      onClick={handleClearCustomSupabase}
-                      disabled={supabaseLoading}
-                      className="text-zinc-500 hover:text-white font-mono text-[10px] uppercase tracking-wider py-1.5 px-3 rounded border border-zinc-800 hover:bg-zinc-950 cursor-pointer disabled:opacity-50 transition-all"
-                    >
-                      Restaurar Padrão
-                    </button>
-                    
-                    <button
-                      type="button"
-                      onClick={() => handleConnectSupabase(customSupabaseUrl, customSupabaseKey)}
-                      disabled={supabaseLoading}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-mono font-bold text-[10px] uppercase tracking-widest py-2 px-5 rounded-lg disabled:opacity-50 transition-all cursor-pointer flex items-center gap-2"
-                    >
-                      {supabaseLoading ? 'Conectando...' : 'Aplicar Integração'}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-zinc-950/50 p-4 rounded-lg border border-zinc-800 space-y-1.5 text-[11px] text-zinc-500 font-sans leading-relaxed">
-                  <p className="text-zinc-400 font-semibold uppercase tracking-wider font-mono text-[9px]">Instruções para o novo banco de dados:</p>
-                  <p>1. Certifique-se de que as tabelas de dados (<code className="text-zinc-300 font-mono bg-zinc-900 px-0.5 rounded">customers</code>, <code className="text-zinc-300 font-mono bg-zinc-900 px-0.5 rounded">leads</code>, <code className="text-zinc-300 font-mono bg-zinc-900 px-0.5 rounded">service_orders</code> e <code className="text-zinc-300 font-mono bg-zinc-900 px-0.5 rounded">inventory</code>) foram criadas adequadamente rodando o arquivo SQL contido em <code className="text-zinc-300 font-sans">/supabase/migrations/</code> no SQL Editor do seu novo painel Supabase.</p>
-                  <p>2. Configure devidamente as permissões RLS (Row Level Security) ou utilize as políticas providenciadas para permitir leitura e escrita livre.</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </main>
-      </div>
 
       {/* REGISTER SERVICE ORDER REGISTRATION MODAL */}
       <ServiceOrderModal
