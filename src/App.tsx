@@ -56,7 +56,11 @@ export default function App() {
   });
   const [activeUser, setActiveUser] = useState<string>(() => {
     const cached = localStorage.getItem('mc_crm_username') || 'Marcelo';
-    return cached.includes('@') ? cached.split('@')[0] : cached;
+    const name = cached.includes('@') ? cached.split('@')[0] : cached;
+    if (name.toLowerCase() === 'icm.melo.fm' || name.toLowerCase() === 'icm.melo.fm@gmail.com') {
+      return 'Marcelo';
+    }
+    return name;
   });
 
   // Navigation Section States matching Sidebar expectations
@@ -82,7 +86,10 @@ export default function App() {
 
   const handleLoginSuccess = (user: string) => {
     setIsAuthenticated(true);
-    const displayName = user.includes('@') ? user.split('@')[0] : user;
+    let displayName = user.includes('@') ? user.split('@')[0] : user;
+    if (displayName.toLowerCase() === 'icm.melo.fm' || displayName.toLowerCase() === 'icm.melo.fm@gmail.com') {
+      displayName = 'Marcelo';
+    }
     setActiveUser(displayName);
     setAppToast(`Bem-vindo, ${displayName}!`);
     setTimeout(() => setAppToast(null), 4000);
