@@ -575,6 +575,7 @@ export default function App() {
               onApproveLeadToServiceOrder={handleApproveLeadToServiceOrder}
               funnelStages={funnelStages}
               setFunnelStages={setFunnelStages}
+              inventory={inventory}
             />
           )}
 

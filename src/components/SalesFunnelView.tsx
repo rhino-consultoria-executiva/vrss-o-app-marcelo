@@ -17,7 +17,7 @@ import {
   ChevronUp,
   ChevronDown
 } from 'lucide-react';
-import { Lead, Customer, FunnelStage } from '../types';
+import { Lead, Customer, FunnelStage, InventoryItem } from '../types';
 
 interface SalesFunnelViewProps {
   leads: Lead[];
@@ -27,6 +27,7 @@ interface SalesFunnelViewProps {
   onApproveLeadToServiceOrder: (lead: Lead) => void;
   funnelStages?: FunnelStage[];
   setFunnelStages?: React.Dispatch<React.SetStateAction<FunnelStage[]>>;
+  inventory?: InventoryItem[];
 }
 
 export default function SalesFunnelView({
@@ -36,13 +37,18 @@ export default function SalesFunnelView({
   setCustomers,
   onApproveLeadToServiceOrder,
   funnelStages = [],
-  setFunnelStages
+  setFunnelStages,
+  inventory = []
 }: SalesFunnelViewProps) {
   // States for diagnostic loader and modal view
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+
+  // States for AI Diagnosis loader and progress details
+  const [generatingAiId, setGeneratingAiId] = useState<string | null>(null);
+  const [aiLoadingMessage, setAiLoadingMessage] = useState<string>('');
 
   // Funnel stage manager local states
   const [showStageManager, setShowStageManager] = useState(false);
@@ -101,6 +107,111 @@ export default function SalesFunnelView({
       }
       return updatedLead;
     }));
+  };
+
+  // Call backend custom node server to run Gemini Smart diagnosis
+  const handleGenerateAiDiagnosis = async (lead: Lead) => {
+    setGeneratingAiId(lead.id);
+    setAiLoadingMessage('Inicializando análise técnica pelo motor Gemini...');
+    
+    const messages = [
+      'Analisando parâmetros do modelo veicular...',
+      'Cruzando queixa de sintomas com nosso histórico...',
+      'Pesquisando peças compatíveis em nosso estoque...',
+      'Formatando recomendações e estimativa de horas...',
+      'Finalizando laudo com sugestões de performance...'
+    ];
+    
+    let msgIndex = 0;
+    const interval = setInterval(() => {
+      if (msgIndex < messages.length) {
+        setAiLoadingMessage(messages[msgIndex]);
+        msgIndex++;
+      }
+    }, 1500);
+
+    try {
+      const resp = await fetch('/api/gemini/diagnostico', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vehicleBrand: lead.vehicleBrand,
+          vehicleModel: lead.vehicleModel,
+          vehicleYear: lead.vehicleYear,
+          description: lead.description,
+          category: lead.category,
+          inventory: inventory || []
+        })
+      });
+
+      if (!resp.ok) {
+        throw new Error('Falha na resposta do servidor');
+      }
+
+      const data = await resp.json();
+      const updatedDiagnosis = data.diagnosis;
+
+      // Update lead in the list
+      setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, aiDiagnosis: updatedDiagnosis } : l));
+      
+      // Update our active modal state if selected
+      if (selectedLead && selectedLead.id === lead.id) {
+        setSelectedLead(prev => prev ? { ...prev, aiDiagnosis: updatedDiagnosis } : null);
+      }
+      
+      setFeedbackMsg('✓ Laudo Técnico Inteligente Gerado!');
+      setTimeout(() => setFeedbackMsg(null), 3000);
+    } catch (err: any) {
+      console.error(err);
+      setFeedbackMsg('Falha ao gerar o diagnóstico.');
+      setTimeout(() => setFeedbackMsg(null), 3005);
+    } finally {
+      clearInterval(interval);
+      setGeneratingAiId(null);
+    }
+  };
+
+  // Helper to safely render markdown tokens into styled React content
+  const renderMarkdown = (txt: string) => {
+    if (!txt) return null;
+    const lines = txt.split('\n');
+    return lines.map((line, idx) => {
+      const clean = line.trim();
+      if (clean.startsWith('###')) {
+        return <h5 key={idx} className="text-sm font-bold text-white mt-4 mb-2 tracking-tight select-text">{clean.replace('###', '').trim()}</h5>;
+      }
+      if (clean.startsWith('##')) {
+        return <h4 key={idx} className="text-sm font-bold text-indigo-400 mt-4 mb-2 tracking-tight select-text">{clean.replace('##', '').trim()}</h4>;
+      }
+      if (clean.startsWith('#')) {
+        return <h3 key={idx} className="text-base font-bold text-indigo-400 mt-5 mb-2.5 tracking-tight select-text">{clean.replace('#', '').trim()}</h3>;
+      }
+      if (clean.startsWith('**') && clean.endsWith('**')) {
+        return <p key={idx} className="text-xs font-bold text-indigo-300 mt-2.5 select-text">{clean.replace(/\*\*/g, '').trim()}</p>;
+      }
+      if (clean.startsWith('*') || clean.startsWith('-')) {
+        const itemText = clean.replace(/^[\*\-]\s*/, '').trim();
+        return (
+          <li key={idx} className="text-xs text-zinc-300 ml-4 list-disc pl-1 leading-relaxed mt-1 select-text">
+            {parseInlineBold(itemText)}
+          </li>
+        );
+      }
+      if (clean === '') {
+        return <div key={idx} className="h-2" />;
+      }
+      return <p key={idx} className="text-xs text-zinc-300 leading-relaxed mt-1.5 select-text">{parseInlineBold(line)}</p>;
+    });
+  };
+
+  const parseInlineBold = (text: string) => {
+    const parts = text.split('**');
+    return parts.map((part, index) => {
+      if (index % 2 === 1) {
+        return <strong key={index} className="font-semibold text-white">{part}</strong>;
+      }
+      return part;
+    });
   };
 
   const deleteLead = (leadId: string, e: React.MouseEvent) => {
@@ -804,6 +915,51 @@ export default function SalesFunnelView({
                   <div className="p-3 bg-zinc-950 border border-zinc-850 rounded-lg text-xs leading-relaxed text-zinc-300 text-left">
                     {selectedLead.description}
                   </div>
+                </div>
+
+                {/* AI DIAGNOSIS INTEGRATION PANEL */}
+                <div id="ai-diagnosis-section" className="border-t border-zinc-800 pt-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[#a5b4fc] animate-pulse" />
+                      <h4 className="font-bold text-xs uppercase tracking-wider text-white">Análise Mecânica Avançada (Gemini IA)</h4>
+                    </div>
+                    {selectedLead.aiDiagnosis && (
+                      <button
+                        onClick={() => handleGenerateAiDiagnosis(selectedLead)}
+                        disabled={generatingAiId === selectedLead.id}
+                        className="text-[10px] font-mono font-bold text-zinc-400 hover:text-white uppercase tracking-widest cursor-pointer transition-all border border-zinc-800 hover:bg-zinc-950 px-2.5 py-1 rounded"
+                      >
+                        Reavaliar Sintomas
+                      </button>
+                    )}
+                  </div>
+
+                  {generatingAiId === selectedLead.id ? (
+                    <div className="p-6 bg-zinc-950/80 border border-indigo-500/10 rounded-xl flex flex-col items-center justify-center space-y-3 text-center animate-pulse">
+                      <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
+                      <p className="text-xs font-mono font-semibold text-white">{aiLoadingMessage}</p>
+                      <p className="text-[10px] text-zinc-500">A IA está conectando à malha de estoque e dados do veículo...</p>
+                    </div>
+                  ) : selectedLead.aiDiagnosis ? (
+                    <div className="p-4 bg-zinc-950 border border-indigo-500/10 rounded-xl text-xs space-y-2 text-left shadow-inner select-text">
+                      <div className="prose prose-sm prose-invert max-w-none text-zinc-300">
+                        {renderMarkdown(selectedLead.aiDiagnosis)}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-indigo-950/10 border border-indigo-500/10 rounded-xl text-left space-y-3">
+                      <p className="text-xs text-zinc-300 leading-relaxed font-sans">
+                        Gere eletronicamente um **Laudo Técnico Informatizado** baseado no modelo de engenharia da marca. Analisa possíveis falhas, itens recomendados em estoque de acordo com a queixa e propostas de performance.
+                      </p>
+                      <button
+                        onClick={() => handleGenerateAiDiagnosis(selectedLead)}
+                        className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-mono font-bold text-[10px] uppercase tracking-widest py-2.5 px-4 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" /> Gerar Laudo Técnico Especializado
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Bottom action controls */}
