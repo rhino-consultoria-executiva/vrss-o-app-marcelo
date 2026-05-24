@@ -112,13 +112,8 @@ CREATE TABLE IF NOT EXISTS inventory (
   compatibilities TEXT[] DEFAULT '{}'::text[],
   min_stock INTEGER DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE ZONE DEFAULT NOW()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-
--- Note: the previous line may have a typo. Let's write standard robust PostgreSQL.
--- Let's make sure it is updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-ALTER TABLE inventory DROP COLUMN IF EXISTS updated_at;
-ALTER TABLE inventory ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
 CREATE INDEX IF NOT EXISTS idx_inventory_sku ON inventory(sku);
 CREATE INDEX IF NOT EXISTS idx_inventory_category ON inventory(category);

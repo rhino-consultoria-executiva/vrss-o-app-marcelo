@@ -617,6 +617,7 @@ export default function App() {
             <ReportsView 
               serviceOrders={serviceOrders}
               customers={customers}
+              setServiceOrders={setServiceOrders}
             />
           )}
 
