@@ -440,6 +440,7 @@ export default function App() {
   // Modal open states
   const [isOSModalOpen, setIsOSModalOpen] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [osInitialCustomerId, setOsInitialCustomerId] = useState<string>('');
   
   // Mobile sidebar drawer open state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -581,6 +582,7 @@ export default function App() {
             <ServiceHistoryView 
               serviceOrders={serviceOrders}
               setServiceOrders={setServiceOrders}
+              onNewOrderClick={() => setIsOSModalOpen(true)}
             />
           )}
 
@@ -602,6 +604,10 @@ export default function App() {
               leads={leads}
               setLeads={setLeads}
               funnelStages={funnelStages}
+              onNewOrderClick={(customerId) => {
+                setOsInitialCustomerId(customerId);
+                setIsOSModalOpen(true);
+              }}
             />
           )}
 
@@ -609,6 +615,7 @@ export default function App() {
             <ServiceHistoryView 
               serviceOrders={serviceOrders}
               setServiceOrders={setServiceOrders}
+              onNewOrderClick={() => setIsOSModalOpen(true)}
             />
           )}
 
@@ -778,11 +785,15 @@ export default function App() {
       {/* REGISTER SERVICE ORDER REGISTRATION MODAL */}
       <ServiceOrderModal
         isOpen={isOSModalOpen}
-        onClose={() => setIsOSModalOpen(false)}
+        onClose={() => {
+          setIsOSModalOpen(false);
+          setOsInitialCustomerId('');
+        }}
         customers={customers}
         setCustomers={setCustomers}
         serviceOrders={serviceOrders}
         setServiceOrders={setServiceOrders}
+        initialCustomerId={osInitialCustomerId}
       />
 
       {/* REGISTER CUSTOMER DETAILS MODAL */}

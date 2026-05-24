@@ -9,6 +9,7 @@ interface ServiceOrderModalProps {
   setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
   serviceOrders: ServiceOrder[];
   setServiceOrders: React.Dispatch<React.SetStateAction<ServiceOrder[]>>;
+  initialCustomerId?: string;
 }
 
 export default function ServiceOrderModal({
@@ -17,7 +18,8 @@ export default function ServiceOrderModal({
   customers,
   setCustomers,
   serviceOrders,
-  setServiceOrders
+  setServiceOrders,
+  initialCustomerId
 }: ServiceOrderModalProps) {
   // Order parameters
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
@@ -36,6 +38,84 @@ export default function ServiceOrderModal({
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Quick Customer addition states
+  const [showQuickCustomerForm, setShowQuickCustomerForm] = useState(false);
+  const [quickCustError, setQuickCustError] = useState<string | null>(null);
+  const [quickCustSuccess, setQuickCustSuccess] = useState<string | null>(null);
+  const [quickName, setQuickName] = useState('');
+  const [quickPhone, setQuickPhone] = useState('');
+  const [quickBrand, setQuickBrand] = useState('');
+  const [quickModel, setQuickModel] = useState('');
+  const [quickPlate, setQuickPlate] = useState('');
+  const [quickYear, setQuickYear] = useState('');
+
+  // Preselect dynamic customer when opened with initialCustomerId
+  useEffect(() => {
+    if (isOpen && initialCustomerId) {
+      setSelectedCustomerId(initialCustomerId);
+    }
+  }, [isOpen, initialCustomerId]);
+
+  const handleCreateQuickCustomer = () => {
+    setQuickCustError(null);
+    setQuickCustSuccess(null);
+
+    if (!quickName.trim()) {
+      setQuickCustError("Nome do cliente é obrigatório.");
+      return;
+    }
+    if (!quickBrand.trim()) {
+      setQuickCustError("A marca do carro é obrigatória.");
+      return;
+    }
+    if (!quickModel.trim()) {
+      setQuickCustError("O modelo do carro é obrigatório.");
+      return;
+    }
+    if (!quickPlate.trim()) {
+      setQuickCustError("A placa do carro é obrigatória.");
+      return;
+    }
+
+    const yearNum = quickYear.trim() ? parseInt(quickYear.trim(), 10) : new Date().getFullYear();
+    const finalYear = isNaN(yearNum) ? new Date().getFullYear() : yearNum;
+
+    const newId = `CUST-${Math.floor(1000 + Math.random() * 9000)}`;
+    const initials = quickName.trim().split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'CX';
+
+    const newCustomer: Customer = {
+      id: newId,
+      name: quickName.trim(),
+      email: `${quickName.trim().toLowerCase().replace(/\s+/g, '.')}@email.com`,
+      phone: quickPhone.trim() || '+55 11 99999-9999',
+      totalSpent: 0,
+      status: 'ATIVO',
+      avatarText: initials,
+      vehicleBrand: quickBrand.trim(),
+      vehicleModel: quickModel.trim(),
+      vehiclePlate: quickPlate.trim().toUpperCase(),
+      vehicleYear: finalYear,
+      joinDate: new Date().toISOString().split('T')[0]
+    };
+
+    // Add to global customers list
+    setCustomers(prev => [newCustomer, ...prev]);
+    setSelectedCustomerId(newId);
+    setQuickCustSuccess(`Cliente ${quickName} cadastrado com sucesso!`);
+
+    // Reset and hide form
+    setTimeout(() => {
+      setQuickName('');
+      setQuickPhone('');
+      setQuickBrand('');
+      setQuickModel('');
+      setQuickPlate('');
+      setQuickYear('');
+      setShowQuickCustomerForm(false);
+      setQuickCustSuccess(null);
+    }, 1500);
+  };
 
   // If customer is selected, pre-populate vehicle specifications instantly!
   useEffect(() => {
@@ -170,18 +250,128 @@ export default function ServiceOrderModal({
         <div className="space-y-5">
           
           {/* Customer Selection */}
-          <div className="space-y-1.5">
-            <label className="font-mono text-[9px] text-zinc-500 uppercase tracking-wider block">Selecione o Cliente Cadastrado *</label>
-            <select
-              value={selectedCustomerId}
-              onChange={e => setSelectedCustomerId(e.target.value)}
-              className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-lg px-3 py-2.5 text-xs outline-none focus:border-red-500 transition-all"
-            >
-              <option value="" className="bg-zinc-900">-- Selecione um Cliente da Lista --</option>
-              {customers.map(c => (
-                <option key={c.id} value={c.id} className="bg-zinc-900">{c.name} ({c.vehicleBrand} {c.vehicleModel} - Placa: {c.vehiclePlate})</option>
-              ))}
-            </select>
+          <div className="space-y-1.5 animate-fade-in">
+            <div className="flex justify-between items-center">
+              <label className="font-mono text-[9px] text-zinc-500 uppercase tracking-wider block">Selecione o Cliente Cadastrado *</label>
+              <button
+                type="button"
+                onClick={() => setShowQuickCustomerForm(!showQuickCustomerForm)}
+                className="font-mono text-[9px] font-bold text-red-500 hover:text-red-400 flex items-center gap-1 uppercase cursor-pointer"
+              >
+                {showQuickCustomerForm ? '✕ Cancelar Cadastro' : '➕ Cadastrar Novo Rápido'}
+              </button>
+            </div>
+
+            {showQuickCustomerForm ? (
+              <div id="quick-add-customer-panel" className="bg-zinc-950 p-4 rounded-xl border border-red-500/20 space-y-4 text-xs mt-1 animate-fade-in">
+                <span className="font-mono text-[10px] text-zinc-400 uppercase tracking-widest block font-bold">Cadastro Rápido de Cliente</span>
+                
+                {quickCustError && (
+                  <div className="bg-red-500/10 border border-red-500/25 text-red-400 py-1.5 px-3 rounded text-[10px] font-mono select-text">
+                    ⚠️ {quickCustError}
+                  </div>
+                )}
+                {quickCustSuccess && (
+                  <div className="bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 py-1.5 px-3 rounded text-[10px] font-mono select-text">
+                    ✓ {quickCustSuccess}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="font-mono text-[9px] text-zinc-500 uppercase">Nome Completo *</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: João da Silva"
+                      value={quickName}
+                      onChange={e => setQuickName(e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-lg px-2.5 py-2 text-xs outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-mono text-[9px] text-zinc-500 uppercase">Telefone de Contato</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: +55 11 98765-4321"
+                      value={quickPhone}
+                      onChange={e => setQuickPhone(e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-lg px-2.5 py-2 text-xs outline-none focus:border-red-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="space-y-1">
+                    <label className="font-mono text-[9px] text-zinc-500 uppercase">Montadora *</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Audi"
+                      value={quickBrand}
+                      onChange={e => setQuickBrand(e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-lg px-2 py-2 text-xs outline-none focus:border-red-500 uppercase"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-mono text-[9px] text-zinc-500 uppercase">Modelo *</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: RS6"
+                      value={quickModel}
+                      onChange={e => setQuickModel(e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-lg px-2 py-2 text-xs outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-mono text-[9px] text-zinc-500 uppercase">Placa *</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: MCQ8080"
+                      value={quickPlate}
+                      onChange={e => setQuickPlate(e.target.value.toUpperCase())}
+                      className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-lg px-2 py-2 text-xs outline-none focus:border-red-500 uppercase text-center"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-mono text-[9px] text-zinc-500 uppercase">Ano</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 2024"
+                      value={quickYear}
+                      onChange={e => setQuickYear(e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-lg px-2 py-2 text-xs outline-none focus:border-red-500 text-center"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickCustomerForm(false)}
+                    className="border border-zinc-800 text-zinc-400 hover:text-white font-mono text-[10px] py-1.5 px-3 rounded-lg cursor-pointer"
+                  >
+                    Voltar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCreateQuickCustomer}
+                    className="bg-red-600 hover:bg-red-700 text-white font-mono font-bold text-[10px] py-1.5 px-4 rounded-lg cursor-pointer uppercase tracking-wider"
+                  >
+                    Confirmar Cadastro Rápido
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <select
+                value={selectedCustomerId}
+                onChange={e => setSelectedCustomerId(e.target.value)}
+                className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-lg px-3 py-2.5 text-xs outline-none focus:border-red-500 transition-all font-sans"
+              >
+                <option value="" className="bg-zinc-900">-- Selecione um Cliente da Lista --</option>
+                {customers.map(c => (
+                  <option key={c.id} value={c.id} className="bg-zinc-900">{c.name} ({c.vehicleBrand} {c.vehicleModel} - Placa: {c.vehiclePlate})</option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Auto Filled Vehicle card details */}

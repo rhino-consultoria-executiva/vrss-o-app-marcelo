@@ -15,7 +15,8 @@ import {
   Check,
   FileDown,
   Trash2,
-  Pencil
+  Pencil,
+  Plus
 } from 'lucide-react';
 import { ServiceOrder } from '../types';
 import { jsPDF } from 'jspdf';
@@ -23,11 +24,13 @@ import { jsPDF } from 'jspdf';
 interface ServiceHistoryViewProps {
   serviceOrders: ServiceOrder[];
   setServiceOrders: React.Dispatch<React.SetStateAction<ServiceOrder[]>>;
+  onNewOrderClick?: () => void;
 }
 
 export default function ServiceHistoryView({
   serviceOrders,
-  setServiceOrders
+  setServiceOrders,
+  onNewOrderClick
  }: ServiceHistoryViewProps) {
   const [selectedOrder, setSelectedOrder] = useState<ServiceOrder | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -356,13 +359,24 @@ ${divider}
     <div id="service-history-content" className="p-8 space-y-6 bg-zinc-950 text-zinc-100 min-h-[calc(100vh-80px)] font-sans">
       
       {/* Filters bar */}
-      <div id="history-filter-panel" className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-850 pb-5">
-        <div>
-          <h3 className="font-semibold text-base text-white uppercase tracking-tight">Painel de Monitoramento Geral</h3>
-          <p className="text-xs text-zinc-400 mt-0.5">Clique em um serviço para atualizar seu status de reparo, gerir peças ou emitir orçamento.</p>
+      <div id="history-filter-panel" className="flex flex-col gap-4 border-b border-zinc-850 pb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
+          <div>
+            <h3 className="font-semibold text-base text-white uppercase tracking-tight">Painel de Monitoramento Geral</h3>
+            <p className="text-xs text-zinc-400 mt-0.5">Clique em um serviço para atualizar seu status de reparo, gerir peças ou emitir orçamento.</p>
+          </div>
+          {onNewOrderClick && (
+            <button
+              onClick={onNewOrderClick}
+              className="bg-red-650 hover:bg-red-700 text-white font-mono text-xs font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all uppercase self-start sm:self-center shrink-0 border border-transparent shadow hover:border-red-500/30"
+            >
+              <Plus className="w-4 h-4 text-white" />
+              Emitir Nova O.S.
+            </button>
+          )}
         </div>
 
-        <div className="flex gap-2 bg-zinc-900 p-1 border border-zinc-800 rounded-xl overflow-x-auto max-w-[calc(100vw-32px)] sm:max-w-none">
+        <div className="flex gap-2 bg-zinc-900 p-1 border border-zinc-800 rounded-xl overflow-x-auto max-w-[calc(100vw-32px)] sm:max-w-none self-start">
           {['ALL', 'diagnostico', 'aguardando_pecas', 'execucao', 'entregue'].map((filter) => (
             <button
               key={filter}

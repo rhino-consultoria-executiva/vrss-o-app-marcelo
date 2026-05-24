@@ -9,7 +9,8 @@ import {
   CreditCard,
   UserCheck,
   Trash2,
-  Layers
+  Layers,
+  Wrench
 } from 'lucide-react';
 import { Customer, Lead, FunnelStage } from '../types';
 
@@ -22,6 +23,7 @@ interface CustomerBaseViewProps {
   leads: Lead[];
   setLeads: React.Dispatch<React.SetStateAction<Lead[]>>;
   funnelStages?: FunnelStage[];
+  onNewOrderClick?: (id: string) => void;
 }
 
 export default function CustomerBaseView({
@@ -32,7 +34,8 @@ export default function CustomerBaseView({
   setBrandsList,
   leads,
   setLeads,
-  funnelStages
+  funnelStages,
+  onNewOrderClick
 }: CustomerBaseViewProps) {
   // Navigation & Filtering States
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'VALOR' | 'RECENTE' | 'INATIVO'>('ALL');
@@ -396,6 +399,14 @@ export default function CustomerBaseView({
                   {/* Column 6: Actions */}
                   <td className="py-5 text-center pr-4 align-middle" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-center gap-1.5">
+                      <button
+                        title="Emitir Ordem de Serviço (O.S.)"
+                        onClick={() => onNewOrderClick?.(customer.id)}
+                        className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-500/10 backdrop-blur-xs rounded-lg transition-all cursor-pointer inline-flex items-center justify-center outline-none border border-transparent hover:border-red-500/25"
+                      >
+                        <Wrench className="w-3.5 h-3.5" />
+                      </button>
+
                       <button
                         title="Criar Oportunidade no Funil de Vendas"
                         onClick={() => {
