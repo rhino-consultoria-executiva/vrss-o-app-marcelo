@@ -28,7 +28,7 @@ const DEFAULT_FUNNEL_STAGES: FunnelStage[] = [
   { id: 'negotiation', title: 'Negociação', color: '#a5b4fc' },
   { id: 'approved', title: 'Serviço Aprovado', color: '#10b981' }
 ];
-import { HelpCircle, ShieldAlert, Check } from 'lucide-react';
+import { HelpCircle, ShieldAlert, Check, Database, ServerCrash, Loader2 } from 'lucide-react';
 import { 
   dbService, 
   isSupabaseConfigured, 
@@ -112,6 +112,11 @@ export default function App() {
   const [supabaseLoading, setSupabaseLoading] = useState(false);
   const [supabaseStatusMsg, setSupabaseStatusMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
+  // Dynamic DB Migration States
+  const [dbConnectionString, setDbConnectionString] = useState('');
+  const [migrationLoading, setMigrationLoading] = useState(false);
+  const [migrationStatus, setMigrationStatus] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
   const handleConnectSupabase = async (urlStr: string, keyStr: string) => {
     setSupabaseLoading(true);
     setSupabaseStatusMsg(null);
@@ -159,6 +164,48 @@ export default function App() {
     setCustomSupabaseUrl(url);
     setCustomSupabaseKey(key);
     handleConnectSupabase(url, key);
+  };
+
+  const handleRunMigration = async (connStr: string) => {
+    if (!connStr.trim()) {
+      setMigrationStatus({
+        type: 'error',
+        text: 'Por favor, insira uma String de Conexão (URI) do PostgreSQL válida.'
+      });
+      return;
+    }
+
+    setMigrationLoading(true);
+    setMigrationStatus(null);
+
+    try {
+      const resp = await fetch('/api/db/migrate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ databaseUrl: connStr.trim() })
+      });
+
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        throw new Error(data.error || 'Erro desconhecido ao executar migração');
+      }
+
+      setMigrationStatus({
+        type: 'success',
+        text: data.message || 'Todas as tabelas do CRM foram criadas com êxito!'
+      });
+      setAppToast('Migração concluída com sucesso!');
+      setTimeout(() => setAppToast(null), 4000);
+    } catch (err: any) {
+      console.error(err);
+      setMigrationStatus({
+        type: 'error',
+        text: err.message || 'Falha ao conectar ou rodar as queries de migração.'
+      });
+    } finally {
+      setMigrationLoading(false);
+    }
   };
 
   // Delta syncer callbacks
@@ -772,10 +819,67 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* AUTOMATED SQL MIGRATION TRIGGER CARD */}
+                <div className="bg-zinc-950/85 p-5 rounded-xl border border-indigo-500/15 space-y-4 text-left animate-fade-in mt-4">
+                  <div className="flex items-center gap-2">
+                    <Database className="w-4 h-4 text-indigo-400" />
+                    <p className="text-xs text-white font-bold uppercase tracking-wider font-mono">Migrador SQL de Tabelas (Supabase)</p>
+                  </div>
+                  
+                  <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">
+                    Você pode rodar as migrações SQL automaticamente preenchendo o campo de <strong>PostgreSQL Connection URI</strong> do seu novo Supabase abaixo. O Node.js fará a conexão segura e criará todas as tabelas (<code className="text-zinc-300 font-mono text-[10px]">customers, leads, service_orders, inventory, funnel_stages</code>), triggers reativos, políticas de RLS e dados demonstrativos.
+                  </p>
+
+                  <div className="space-y-3 pt-2">
+                    <div className="space-y-1">
+                      <label className="font-mono text-[9px] text-zinc-500 uppercase">PostgreSQL Connection URI (Supabase)</label>
+                      <input
+                        type="password"
+                        placeholder="Ex: postgresql://postgres.xxxx:[SENHA]@[HOST]:5432/postgres"
+                        value={dbConnectionString}
+                        onChange={(e) => setDbConnectionString(e.target.value)}
+                        className="w-full bg-zinc-900 border border-zinc-800 text-zinc-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-550 font-mono text-[10px]"
+                      />
+                    </div>
+
+                    {migrationStatus && (
+                      <div className={`p-4 rounded-lg text-xs border ${
+                        migrationStatus.type === 'success' 
+                          ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/20' 
+                          : 'bg-red-950/40 text-red-400 border-red-500/20'
+                      }`}>
+                        <p className="font-bold uppercase tracking-wider text-[9px] font-mono mb-1">
+                          {migrationStatus.type === 'success' ? '✓ Sucesso de Migração' : '✗ Falha de Configuração'}
+                        </p>
+                        <p>{migrationStatus.text}</p>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleRunMigration(dbConnectionString)}
+                      disabled={migrationLoading}
+                      className="w-full bg-indigo-600 hover:bg-indigo-705 text-white font-mono font-bold text-[10px] uppercase tracking-widest py-2.5 px-4 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      {migrationLoading ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Executando SQL no Banco de Dados...</span>
+                        </>
+                      ) : (
+                        <>
+                          <ServerCrash className="w-3.5 h-3.5" />
+                          <span>Executar Migração Suprema Agora</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
                 <div className="bg-zinc-950/50 p-4 rounded-lg border border-zinc-800 space-y-1.5 text-[11px] text-zinc-500 font-sans leading-relaxed">
-                  <p className="text-zinc-400 font-semibold uppercase tracking-wider font-mono text-[9px]">Instruções para o novo banco de dados:</p>
-                  <p>1. Certifique-se de que as tabelas de dados (<code className="text-zinc-300 font-mono bg-zinc-900 px-0.5 rounded">customers</code>, <code className="text-zinc-300 font-mono bg-zinc-900 px-0.5 rounded">leads</code>, <code className="text-zinc-300 font-mono bg-zinc-900 px-0.5 rounded">service_orders</code> e <code className="text-zinc-300 font-mono bg-zinc-900 px-0.5 rounded">inventory</code>) foram criadas adequadamente rodando o arquivo SQL contido em <code className="text-zinc-300 font-sans">/supabase/migrations/</code> no SQL Editor do seu novo painel Supabase.</p>
-                  <p>2. Configure devidamente as permissões RLS (Row Level Security) ou utilize as políticas providenciadas para permitir leitura e escrita livre.</p>
+                  <p className="text-zinc-400 font-semibold uppercase tracking-wider font-mono text-[9px]">Instruções Manuais Alternativas:</p>
+                  <p>1. Se preferir rodar manualmente, copie o arquivo contido em <code className="text-zinc-300 font-sans">/supabase/migrations/20260523000000_create_crm_tables.sql</code> e execute no <strong>SQL Editor</strong> do painel Supabase.</p>
+                  <p>2. Você também pode configurar a variável <code className="text-zinc-300 font-mono">DATABASE_URL</code> no arquivo <code className="text-zinc-300 font-mono">.env</code> e executar no terminal o comando: <br/><code className="text-zinc-200 font-mono bg-zinc-900 px-1 py-0.5 rounded text-[10px] block mt-1">npm run db:migrate</code></p>
                 </div>
               </div>
             </div>

@@ -1,6 +1,8 @@
 import express from "express";
 import path from "path";
 import dotenv from "dotenv";
+import fs from "fs";
+import pg from "pg";
 import { createServer as createViteServer } from "vite";
 
 // Load environment variables
@@ -16,6 +18,47 @@ import { GoogleGenAI } from "@google/genai";
 // API health endpoint
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
+});
+
+// Automated Database Migrations to Supabase (PostgreSQL)
+app.post("/api/db/migrate", async (req, res) => {
+  const { databaseUrl } = req.body;
+  const connectionString = databaseUrl || process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
+
+  if (!connectionString) {
+    return res.status(400).json({ 
+      error: "É obrigatório fornecer a Connection String do PostgreSQL (Supabase DB URI) para executar as migrações." 
+    });
+  }
+
+  const client = new pg.Client({
+    connectionString,
+    ssl: { rejectUnauthorized: false }
+  });
+
+  try {
+    await client.connect();
+
+    const migrationPath = path.join(process.cwd(), "supabase", "migrations", "20260523000000_create_crm_tables.sql");
+    if (!fs.existsSync(migrationPath)) {
+      throw new Error(`Arquivo de migração não encontrado em: ${migrationPath}`);
+    }
+
+    const sql = fs.readFileSync(migrationPath, "utf-8");
+    await client.query(sql);
+
+    await client.end();
+    return res.json({ 
+      success: true, 
+      message: "Todas as tabelas do CRM, triggers e dados do pátio foram migrados com sucesso para o Supabase!" 
+    });
+  } catch (err: any) {
+    console.error("Migration Error:", err);
+    try { await client.end(); } catch (e) {}
+    return res.status(500).json({ 
+      error: err.message || "Falha ao executar as queries de migração no banco." 
+    });
+  }
 });
 
 // Gemini AI Smart Diagnosis Endpoint
