@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS leads (
   category TEXT CHECK (category IN ('Diagnóstico', 'Tuning', 'Revisão', 'Manutenção', 'Upgrade')),
   value NUMERIC(12, 2),
   priority TEXT CHECK (priority IN ('URGENTE', 'ALTA', 'NORMAL')) DEFAULT 'NORMAL',
-  stage TEXT CHECK (stage IN ('leads', 'quotes', 'negotiation', 'approved')) DEFAULT 'leads',
+  stage TEXT DEFAULT 'leads',
   date_created TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   ai_diagnosis TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -192,3 +192,32 @@ ON CONFLICT (id) DO UPDATE SET
   quantity = EXCLUDED.quantity,
   price = EXCLUDED.price,
   min_stock = EXCLUDED.min_stock;
+
+
+-- 6. Create FUNNEL_STAGES Table
+CREATE TABLE IF NOT EXISTS funnel_stages (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  color TEXT NOT NULL,
+  position INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TRIGGER set_timestamp_funnel_stages
+BEFORE UPDATE ON funnel_stages
+FOR EACH ROW
+EXECUTE FUNCTION trigger_set_timestamp();
+
+-- Seed Default Funnel Stages
+INSERT INTO funnel_stages (id, title, color, position)
+VALUES
+  ('leads', 'Novo Lead', '#818cf8', 0),
+  ('quotes', 'Orçamento Enviado', '#6366f1', 1),
+  ('negotiation', 'Negociação', '#a5b4fc', 2),
+  ('approved', 'Serviço Aprovado', '#10b981', 3)
+ON CONFLICT (id) DO UPDATE SET
+  title = EXCLUDED.title,
+  color = EXCLUDED.color,
+  position = EXCLUDED.position;
+

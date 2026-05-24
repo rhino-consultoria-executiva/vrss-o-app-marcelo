@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Customer, Lead, ServiceOrder, InventoryItem } from './types';
+import { Customer, Lead, ServiceOrder, InventoryItem, FunnelStage } from './types';
 
 export const getSupabaseConfig = () => {
   const localUrl = typeof window !== 'undefined' ? localStorage.getItem('custom_supabase_url') : null;
@@ -334,6 +334,52 @@ export const dbService = {
 
     const { error } = await client
       .from('inventory')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  // --- Funnel Stages ---
+  async getFunnelStages(): Promise<FunnelStage[]> {
+    const client = getSupabaseClient();
+    if (!client) throw new Error('Supabase not configured');
+
+    const { data, error } = await client
+      .from('funnel_stages')
+      .select('*')
+      .order('position', { ascending: true });
+
+    if (error) throw error;
+    return (data || []).map((db: any) => ({
+      id: db.id,
+      title: db.title,
+      color: db.color
+    }));
+  },
+
+  async upsertFunnelStage(stage: FunnelStage, position: number): Promise<void> {
+    const client = getSupabaseClient();
+    if (!client) throw new Error('Supabase not configured');
+
+    const { error } = await client
+      .from('funnel_stages')
+      .upsert({
+        id: stage.id,
+        title: stage.title,
+        color: stage.color,
+        position
+      }, { onConflict: 'id' });
+
+    if (error) throw error;
+  },
+
+  async deleteFunnelStage(id: string): Promise<void> {
+    const client = getSupabaseClient();
+    if (!client) throw new Error('Supabase not configured');
+
+    const { error } = await client
+      .from('funnel_stages')
       .delete()
       .eq('id', id);
 

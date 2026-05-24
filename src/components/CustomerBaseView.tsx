@@ -11,7 +11,7 @@ import {
   Trash2,
   Layers
 } from 'lucide-react';
-import { Customer, Lead } from '../types';
+import { Customer, Lead, FunnelStage } from '../types';
 
 interface CustomerBaseViewProps {
   customers: Customer[];
@@ -21,6 +21,7 @@ interface CustomerBaseViewProps {
   setBrandsList: React.Dispatch<React.SetStateAction<string[]>>;
   leads: Lead[];
   setLeads: React.Dispatch<React.SetStateAction<Lead[]>>;
+  funnelStages?: FunnelStage[];
 }
 
 export default function CustomerBaseView({
@@ -30,7 +31,8 @@ export default function CustomerBaseView({
   brandsList,
   setBrandsList,
   leads,
-  setLeads
+  setLeads,
+  funnelStages
 }: CustomerBaseViewProps) {
   // Navigation & Filtering States
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'VALOR' | 'RECENTE' | 'INATIVO'>('ALL');
@@ -706,13 +708,23 @@ export default function CustomerBaseView({
                     <label className="font-mono text-[10px] text-zinc-500 uppercase">Etapa do Funil</label>
                     <select
                       value={funnelForm.stage}
-                      onChange={(e) => setFunnelForm({ ...funnelForm, stage: e.target.value as Lead['stage'] })}
+                      onChange={(e) => setFunnelForm({ ...funnelForm, stage: e.target.value })}
                       className="w-full bg-[#111415] border border-zinc-800 text-white rounded px-3 py-2 text-xs outline-none focus:border-indigo-500 font-sans"
                     >
-                      <option value="leads">Novo Lead</option>
-                      <option value="quotes">Orçamento Enviado</option>
-                      <option value="negotiation font-sans">Negociação</option>
-                      <option value="approved">Serviço Aprovado</option>
+                      {funnelStages && funnelStages.length > 0 ? (
+                        funnelStages.map((stage) => (
+                          <option key={stage.id} value={stage.id}>
+                            {stage.title}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="leads">Novo Lead</option>
+                          <option value="quotes">Orçamento Enviado</option>
+                          <option value="negotiation">Negociação</option>
+                          <option value="approved">Serviço Aprovado</option>
+                        </>
+                      )}
                     </select>
                   </div>
                 </div>

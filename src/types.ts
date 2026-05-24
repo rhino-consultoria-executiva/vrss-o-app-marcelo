@@ -26,9 +26,15 @@ export interface Lead {
   category: 'Diagnóstico' | 'Tuning' | 'Revisão' | 'Manutenção' | 'Upgrade';
   value: number | ''; // can be null/undefined or empty for "A definir"
   priority: 'URGENTE' | 'ALTA' | 'NORMAL';
-  stage: 'leads' | 'quotes' | 'negotiation' | 'approved';
+  stage: string;
   dateCreated: string;
   aiDiagnosis?: string; // Optional AI-generated proposal details
+}
+
+export interface FunnelStage {
+  id: string;
+  title: string;
+  color: string;
 }
 
 export interface ServiceOrderItem {

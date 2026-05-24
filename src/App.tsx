@@ -20,7 +20,14 @@ import {
   INITIAL_SERVICE_ORDERS, 
   INITIAL_INVENTORY 
 } from './data/mockData';
-import { Customer, Lead, ServiceOrder, InventoryItem } from './types';
+import { Customer, Lead, ServiceOrder, InventoryItem, FunnelStage } from './types';
+
+const DEFAULT_FUNNEL_STAGES: FunnelStage[] = [
+  { id: 'leads', title: 'Novo Lead', color: '#818cf8' },
+  { id: 'quotes', title: 'Orçamento Enviado', color: '#6366f1' },
+  { id: 'negotiation', title: 'Negociação', color: '#a5b4fc' },
+  { id: 'approved', title: 'Serviço Aprovado', color: '#10b981' }
+];
 import { HelpCircle, ShieldAlert, Check } from 'lucide-react';
 import { 
   dbService, 
@@ -86,6 +93,7 @@ export default function App() {
   const [leads, setLeadsRaw] = useState<Lead[]>(INITIAL_LEADS);
   const [serviceOrders, setServiceOrdersRaw] = useState<ServiceOrder[]>(INITIAL_SERVICE_ORDERS);
   const [inventory, setInventoryRaw] = useState<InventoryItem[]>(INITIAL_INVENTORY);
+  const [funnelStages, setFunnelStagesRaw] = useState<FunnelStage[]>(DEFAULT_FUNNEL_STAGES);
 
   // Synchronization tracks and configs
   const [dbSource, setDbSource] = useState<'Supabase' | 'LocalStorage'>('LocalStorage');
@@ -276,6 +284,40 @@ export default function App() {
     });
   };
 
+  const syncFunnelStagesToSupabase = async (prev: FunnelStage[], next: FunnelStage[]) => {
+    try {
+      const nextIds = new Set(next.map(s => s.id));
+      const deleted = prev.filter(s => !nextIds.has(s.id));
+      for (const s of deleted) {
+        try {
+          await dbService.deleteFunnelStage(s.id);
+        } catch (err) {
+          console.warn('Erro ao deletar etapa no Supabase, ignorando:', err);
+        }
+      }
+      for (let i = 0; i < next.length; i++) {
+        try {
+          await dbService.upsertFunnelStage(next[i], i);
+        } catch (err) {
+          console.warn('Erro ao salvar etapa no Supabase, ignorando:', err);
+        }
+      }
+    } catch (e) {
+      console.error('Erro geral ao sincronizar etapas do funil:', e);
+    }
+  };
+
+  const setFunnelStages = (val: React.SetStateAction<FunnelStage[]>) => {
+    setFunnelStagesRaw(prev => {
+      const nextVal = typeof val === 'function' ? (val as any)(prev) : val;
+      localStorage.setItem('mc_crm_funnel_stages', JSON.stringify(nextVal));
+      if (isSupabaseConfigured() && isInitialLoadCompleted.current) {
+        syncFunnelStagesToSupabase(prev, nextVal);
+      }
+      return nextVal;
+    });
+  };
+
   // Initial loader effect running on mount / authentication changes
   useEffect(() => {
     async function loadCrmData() {
@@ -286,10 +328,32 @@ export default function App() {
           const cloudOrders = deduplicateById(await dbService.getServiceOrders());
           const cloudInv = deduplicateById(await dbService.getInventory());
 
+          // Load funnel stages
+          let cloudStages: FunnelStage[] = [];
+          try {
+            cloudStages = await dbService.getFunnelStages();
+          } catch (err) {
+            console.warn('Tabela funnel_stages inacessível ou vazia, usando backup local. Err:', err);
+          }
+
+          if (cloudStages.length === 0) {
+            const cached = localStorage.getItem('mc_crm_funnel_stages');
+            cloudStages = cached ? JSON.parse(cached) : DEFAULT_FUNNEL_STAGES;
+            // Try saving defaults to cloud
+            try {
+              for (let i = 0; i < cloudStages.length; i++) {
+                await dbService.upsertFunnelStage(cloudStages[i], i);
+              }
+            } catch (err) {
+              console.warn('Falhou ao salvar stages padrão no cloud:', err);
+            }
+          }
+
           setCustomersRaw(cloudCust);
           setLeadsRaw(cloudLeads);
           setServiceOrdersRaw(cloudOrders);
           setInventoryRaw(cloudInv);
+          setFunnelStagesRaw(cloudStages);
           setDbSource('Supabase');
 
           // Hot backup local storage syncing
@@ -297,6 +361,7 @@ export default function App() {
           localStorage.setItem('mc_crm_leads', JSON.stringify(cloudLeads));
           localStorage.setItem('mc_crm_service_orders', JSON.stringify(cloudOrders));
           localStorage.setItem('mc_crm_inventory', JSON.stringify(cloudInv));
+          localStorage.setItem('mc_crm_funnel_stages', JSON.stringify(cloudStages));
         } catch (e) {
           console.warn('Supabase offline or table missing, using localStorage fallback. Err:', e);
           loadFromLocalStorage();
@@ -338,6 +403,13 @@ export default function App() {
       else {
         setInventoryRaw(INITIAL_INVENTORY);
         localStorage.setItem('mc_crm_inventory', JSON.stringify(INITIAL_INVENTORY));
+      }
+
+      const cachedStages = localStorage.getItem('mc_crm_funnel_stages');
+      if (cachedStages) setFunnelStagesRaw(JSON.parse(cachedStages));
+      else {
+        setFunnelStagesRaw(DEFAULT_FUNNEL_STAGES);
+        localStorage.setItem('mc_crm_funnel_stages', JSON.stringify(DEFAULT_FUNNEL_STAGES));
       }
     }
 
@@ -493,6 +565,8 @@ export default function App() {
               customers={customers}
               setCustomers={setCustomers}
               onApproveLeadToServiceOrder={handleApproveLeadToServiceOrder}
+              funnelStages={funnelStages}
+              setFunnelStages={setFunnelStages}
             />
           )}
 
@@ -520,6 +594,7 @@ export default function App() {
               setBrandsList={setBrandsList}
               leads={leads}
               setLeads={setLeads}
+              funnelStages={funnelStages}
             />
           )}
 
