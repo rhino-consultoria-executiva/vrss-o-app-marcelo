@@ -40,7 +40,8 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
     }
 
     // 1. Rock-solid Instant master admin login bypass to protect from activation delay or email verification constraints
-    if (trimmedUser.toLowerCase() === 'icm.melo.fm@gmail.com' && password === 'Mc070809*') {
+    const trimmedPassword = password.trim();
+    if (trimmedUser.toLowerCase() === 'icm.melo.fm@gmail.com' && (password === 'Mc070809*' || trimmedPassword === 'Mc070809*')) {
       const userEmail = 'icm.melo.fm@gmail.com';
       if (rememberMe) {
         localStorage.setItem('mc_crm_remembered_user', trimmedUser);

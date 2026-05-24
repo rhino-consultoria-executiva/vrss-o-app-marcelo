@@ -37,6 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name);
 CREATE INDEX IF NOT EXISTS idx_customers_plate ON customers(vehicle_plate);
 
 -- Trigger for customer updating
+DROP TRIGGER IF EXISTS set_timestamp_customers ON customers;
 CREATE TRIGGER set_timestamp_customers
 BEFORE UPDATE ON customers
 FOR EACH ROW
@@ -68,6 +69,7 @@ CREATE TABLE IF NOT EXISTS leads (
 CREATE INDEX IF NOT EXISTS idx_leads_stage ON leads(stage);
 CREATE INDEX IF NOT EXISTS idx_leads_priority ON leads(priority);
 
+DROP TRIGGER IF EXISTS set_timestamp_leads ON leads;
 CREATE TRIGGER set_timestamp_leads
 BEFORE UPDATE ON leads
 FOR EACH ROW
@@ -95,6 +97,7 @@ CREATE TABLE IF NOT EXISTS service_orders (
 CREATE INDEX IF NOT EXISTS idx_service_orders_status ON service_orders(status);
 CREATE INDEX IF NOT EXISTS idx_service_orders_customer ON service_orders(customer_id);
 
+DROP TRIGGER IF EXISTS set_timestamp_service_orders ON service_orders;
 CREATE TRIGGER set_timestamp_service_orders
 BEFORE UPDATE ON service_orders
 FOR EACH ROW
@@ -118,6 +121,7 @@ CREATE TABLE IF NOT EXISTS inventory (
 CREATE INDEX IF NOT EXISTS idx_inventory_sku ON inventory(sku);
 CREATE INDEX IF NOT EXISTS idx_inventory_category ON inventory(category);
 
+DROP TRIGGER IF EXISTS set_timestamp_inventory ON inventory;
 CREATE TRIGGER set_timestamp_inventory
 BEFORE UPDATE ON inventory
 FOR EACH ROW
@@ -199,6 +203,7 @@ CREATE TABLE IF NOT EXISTS funnel_stages (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+DROP TRIGGER IF EXISTS set_timestamp_funnel_stages ON funnel_stages;
 CREATE TRIGGER set_timestamp_funnel_stages
 BEFORE UPDATE ON funnel_stages
 FOR EACH ROW
@@ -232,6 +237,7 @@ ALTER TABLE funnel_stages ENABLE ROW LEVEL SECURITY;
 -- This ensures only logged-in users via Supabase Auth can query or mutate data
 
 -- Customers table policies
+DROP POLICY IF EXISTS "Allow logged-in users full access to customers" ON customers;
 CREATE POLICY "Allow logged-in users full access to customers"
   ON customers
   FOR ALL
@@ -240,6 +246,7 @@ CREATE POLICY "Allow logged-in users full access to customers"
   WITH CHECK (true);
 
 -- Leads table policies
+DROP POLICY IF EXISTS "Allow logged-in users full access to leads" ON leads;
 CREATE POLICY "Allow logged-in users full access to leads"
   ON leads
   FOR ALL
@@ -248,6 +255,7 @@ CREATE POLICY "Allow logged-in users full access to leads"
   WITH CHECK (true);
 
 -- Service Orders table policies
+DROP POLICY IF EXISTS "Allow logged-in users full access to service_orders" ON service_orders;
 CREATE POLICY "Allow logged-in users full access to service_orders"
   ON service_orders
   FOR ALL
@@ -256,6 +264,7 @@ CREATE POLICY "Allow logged-in users full access to service_orders"
   WITH CHECK (true);
 
 -- Inventory table policies
+DROP POLICY IF EXISTS "Allow logged-in users full access to inventory" ON inventory;
 CREATE POLICY "Allow logged-in users full access to inventory"
   ON inventory
   FOR ALL
@@ -264,6 +273,7 @@ CREATE POLICY "Allow logged-in users full access to inventory"
   WITH CHECK (true);
 
 -- Funnel Stages table policies
+DROP POLICY IF EXISTS "Allow logged-in users full access to funnel_stages" ON funnel_stages;
 CREATE POLICY "Allow logged-in users full access to funnel_stages"
   ON funnel_stages
   FOR ALL
