@@ -216,3 +216,59 @@ ON CONFLICT (id) DO UPDATE SET
   color = EXCLUDED.color,
   position = EXCLUDED.position;
 
+
+-----------------------------------------------------------
+-- 7. ROW LEVEL SECURITY (RLS) POLICIES
+-----------------------------------------------------------
+
+-- Enable RLS on all tables
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE service_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE inventory ENABLE ROW LEVEL SECURITY;
+ALTER TABLE funnel_stages ENABLE ROW LEVEL SECURITY;
+
+-- Create policies to allow authenticated users to perform all operations (CRUD)
+-- This ensures only logged-in users via Supabase Auth can query or mutate data
+
+-- Customers table policies
+CREATE POLICY "Allow logged-in users full access to customers"
+  ON customers
+  FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+-- Leads table policies
+CREATE POLICY "Allow logged-in users full access to leads"
+  ON leads
+  FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+-- Service Orders table policies
+CREATE POLICY "Allow logged-in users full access to service_orders"
+  ON service_orders
+  FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+-- Inventory table policies
+CREATE POLICY "Allow logged-in users full access to inventory"
+  ON inventory
+  FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+-- Funnel Stages table policies
+CREATE POLICY "Allow logged-in users full access to funnel_stages"
+  ON funnel_stages
+  FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+
