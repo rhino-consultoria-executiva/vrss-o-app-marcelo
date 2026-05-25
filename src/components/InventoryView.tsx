@@ -173,7 +173,7 @@ export default function InventoryView({
             <thead>
               <tr className="border-b border-zinc-850 font-mono text-[10px] text-zinc-500 uppercase tracking-wider bg-zinc-900/50 no-wrap">
                 <th className="py-4 pl-6 w-44">SKU / ID</th>
-                <th className="py-4 w-96">Nome da Peça de Reposição</th>
+                <th className="py-4 w-96">Nome da Peça Reposição</th>
                 <th className="py-4 w-52">Setor de Estoque</th>
                 <th className="py-4 text-center w-40">Qtd Disponível</th>
                 <th className="py-4 text-right w-44">Valor Unitário</th>
@@ -324,7 +324,7 @@ export default function InventoryView({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="font-mono text-[9px] text-[#ab8987] uppercase">Setor / Categoria de Depósito</label>
+                  <label className="font-mono text-[9px] text-[#ab8987] uppercase">Setor / Setor de Depósito</label>
                   <select
                     value={newItemForm.category}
                     onChange={e => setNewItemForm({ ...newItemForm, category: e.target.value as InventoryItem['category'] })}
@@ -405,7 +405,7 @@ export default function InventoryView({
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-sm w-full p-6 text-left space-y-5 relative shadow-2xl">
             <div className="flex justify-between items-start border-b border-zinc-850 pb-4">
               <div>
-                <h4 className="font-semibold text-sm text-white uppercase tracking-tight">Editar Item do Estoque</h4>
+                <h4 className="font-semibold text-sm text-white uppercase tracking-tight">Editar Item estoque</h4>
                 <p className="font-mono text-[10px] text-zinc-500 mt-0.5">{editingItem.sku}</p>
               </div>
               <button onClick={() => setEditingItem(null)} className="text-zinc-400 hover:text-white cursor-pointer">
@@ -445,7 +445,7 @@ export default function InventoryView({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="font-mono text-[9px] text-[#ab8987] uppercase">Estoque Mínimo</label>
+                  <label className="font-mono text-[9px] text-[#ab8987] uppercase">Mínimo Alerta</label>
                   <input
                     type="number"
                     value={editingItem.minStock}

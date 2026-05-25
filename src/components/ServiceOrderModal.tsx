@@ -410,9 +410,9 @@ export default function ServiceOrderModal({
               <span className="font-mono text-[9px] text-zinc-550 uppercase tracking-wider">Itemização de Peças e Mão de Obra</span>
               <button
                 onClick={addCostRow}
-                className="font-mono text-[9px] font-semibold text-red-500 hover:text-red-400 flex items-center gap-0.5 uppercase tracking-wider cursor-pointer"
+                className="font-mono text-[9px] font-semibold text-red-500 hover:text-red-400 flex items-center gap-0.5 uppercase cursor-pointer"
               >
-                <Plus className="w-3 h-3" /> Adicionar Custo
+                <Plus className="w-3 h-3" /> Adicionar Custo Row
               </button>
             </div>
 
