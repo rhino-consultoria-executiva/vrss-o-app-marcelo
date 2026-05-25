@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Bell, User, Plus, X, Menu } from 'lucide-react';
+import { Search, User, Plus, X, Menu } from 'lucide-react';
 
 interface NavbarProps {
   activeSection: string;
@@ -146,51 +146,7 @@ export default function Navbar({
           <span className="inline sm:hidden">Novo</span>
         </button>
 
-        {/* Notifications Button */}
-        <div id="notification-bell-wrapper" className="relative">
-          <button
-            id="btn-show-notifications"
-            onClick={() => setShowNotifications(!showNotifications)}
-            className="w-9 h-9 rounded-lg border border-zinc-800 bg-zinc-900 hover:bg-zinc-850 flex items-center justify-center transition-all text-zinc-400 hover:text-red-400 outline-none cursor-pointer"
-          >
-            <Bell className="w-4 h-4" />
-            {notificationCount > 0 && (
-              <span id="notification-badge" className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 text-white rounded-full text-[9px] font-black flex items-center justify-center font-mono">
-                {notificationCount}
-              </span>
-            )}
-          </button>
 
-          {/* Notifications Dropdown Panel */}
-          {showNotifications && (
-            <div id="notifications-panel" className="absolute right-0 mt-2 w-72 sm:w-80 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl p-4 z-50">
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-2 mb-2">
-                <span className="font-sans font-bold text-xs uppercase tracking-wider text-red-500">Avisos de Oficina</span>
-                <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-500 font-semibold">{notificationCount} pendentes</span>
-              </div>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {notifications.map((n) => (
-                  <button 
-                    key={n.id} 
-                    onClick={() => handleNotificationClick(n.id)}
-                    className="w-full p-2.5 hover:bg-zinc-850 hover:border-red-500/25 rounded-lg transition-all text-left flex flex-col gap-1 cursor-pointer outline-none focus:bg-zinc-850"
-                  >
-                    <p className="text-xs text-zinc-300 font-sans leading-snug hover:text-white transition-colors">{n.text}</p>
-                    <span className="font-mono text-[9px] text-zinc-500 block">{n.time}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="border-t border-zinc-800 pt-2 mt-2 text-center">
-                <button 
-                  onClick={() => setShowNotifications(false)}
-                  className="font-sans text-[10px] text-red-550 hover:underline uppercase tracking-widest cursor-pointer"
-                >
-                  Fechar Painel
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
 
         {/* Divider */}
         <div className="w-px h-6 bg-zinc-800 hidden sm:block" />
