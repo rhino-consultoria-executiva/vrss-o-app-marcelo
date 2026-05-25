@@ -200,7 +200,7 @@ export default function CustomerBaseView({
                 : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
             }`}
           >
-            Todos Clientes
+            Todos os Clientes
           </button>
 
           <button
@@ -546,7 +546,7 @@ export default function CustomerBaseView({
 
               <div className="grid grid-cols-3 gap-2 bg-[#111415] p-3 rounded border border-[#2d2d2d]">
                 <div className="space-y-1">
-                  <label className="font-mono text-[9px] text-[#ab8987] uppercase">Carro Marca</label>
+                  <label className="font-mono text-[9px] text-[#ab8987] uppercase">Marca do Carro</label>
                   <input
                     type="text"
                     value={editingCustomer.vehicleBrand}
@@ -555,7 +555,7 @@ export default function CustomerBaseView({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="font-mono text-[9px] text-[#ab8987] uppercase">Carro Modelo</label>
+                  <label className="font-mono text-[9px] text-[#ab8987] uppercase">Modelo do Carro</label>
                   <input
                     type="text"
                     value={editingCustomer.vehicleModel}

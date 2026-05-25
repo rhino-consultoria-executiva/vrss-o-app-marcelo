@@ -1078,7 +1078,7 @@ export default function ReportsView({ serviceOrders, customers, setServiceOrders
                     </div>
                   </div>
                   <div className="text-right flex sm:flex-col justify-between sm:justify-start items-center sm:items-end">
-                    <span className="font-mono text-[9px] text-zinc-500 uppercase tracking-widest">ORDENS PARSADAS</span>
+                    <span className="font-mono text-[9px] text-zinc-500 uppercase tracking-widest">ORDENS DETECTADAS</span>
                     <span className="font-mono text-xs font-bold text-emerald-400">{importPreview.length} OS</span>
                   </div>
                 </div>

@@ -897,7 +897,7 @@ export default function SalesFunnelView({
                   </div>
                 </div>
 
-                {/* Patient / customer details contact panel */}
+                {/* Painel de contato do cliente */}
                 <div id="modal-customer-contact" className="grid grid-cols-2 gap-4">
                   <div className="flex items-center gap-2 text-xs text-zinc-300">
                     <Phone className="w-3.5 h-3.5 text-indigo-400" />
