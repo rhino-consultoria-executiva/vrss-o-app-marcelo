@@ -13,7 +13,7 @@ export const getSupabaseConfig = () => {
   const localUrl = typeof window !== 'undefined' ? localStorage.getItem('custom_supabase_url') : null;
   const localKey = typeof window !== 'undefined' ? localStorage.getItem('custom_supabase_anon_key') : null;
   
-  const url = localUrl || (import.meta as any).env.VITE_SUPABASE_URL || (import.meta as any).env.NEXT_PUBLIC_SUPABASE_URL || 'https://qwniodqdhhzbobbupxyf.supabase.co';
+  const url = localUrl || (import.meta as any).env.VITE_SUPABASE_URL || (import.meta as any).env.NEXT_PUBLIC_SUPABASE_URL || 'https://jguexlunvzaiokcdelvy.supabase.co';
   const key = localKey || (import.meta as any).env.VITE_SUPABASE_ANON_KEY || 
               (import.meta as any).env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 
               (import.meta as any).env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_EVFWUO3G2GuY6iFy8lk9Kw_jIMSs4Y2';

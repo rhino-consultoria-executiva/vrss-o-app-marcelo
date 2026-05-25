@@ -113,7 +113,7 @@ export default function App() {
   const [supabaseStatusMsg, setSupabaseStatusMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   // Dynamic DB Migration States
-  const [dbConnectionString, setDbConnectionString] = useState('');
+  const [dbConnectionString, setDbConnectionString] = useState('postgresql://postgres:[YOUR-PASSWORD]@db.jguexlunvzaiokcdelvy.supabase.co:5432/postgres');
   const [migrationLoading, setMigrationLoading] = useState(false);
   const [migrationStatus, setMigrationStatus] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
