@@ -28,6 +28,7 @@ interface SalesFunnelViewProps {
   funnelStages?: FunnelStage[];
   setFunnelStages?: React.Dispatch<React.SetStateAction<FunnelStage[]>>;
   inventory?: InventoryItem[];
+  searchQuery?: string;
 }
 
 export default function SalesFunnelView({
@@ -38,7 +39,8 @@ export default function SalesFunnelView({
   onApproveLeadToServiceOrder,
   funnelStages = [],
   setFunnelStages,
-  inventory = []
+  inventory = [],
+  searchQuery = ''
 }: SalesFunnelViewProps) {
   // States for diagnostic loader and modal view
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -372,7 +374,22 @@ export default function SalesFunnelView({
       {/* Grid columns */}
       <div id="kanban-grid" className="flex gap-6 items-start overflow-x-auto pb-4 max-w-full">
         {columns.map((column) => {
-          const colLeads = leads.filter(l => l.stage === column.id);
+          let colLeads = leads.filter(l => l.stage === column.id);
+
+          if (searchQuery.trim() !== '') {
+            const q = searchQuery.toLowerCase();
+            colLeads = colLeads.filter(l => 
+              l.name.toLowerCase().includes(q) ||
+              l.email.toLowerCase().includes(q) ||
+              l.phone.includes(q) ||
+              l.vehicleBrand.toLowerCase().includes(q) ||
+              l.vehicleModel.toLowerCase().includes(q) ||
+              l.vehiclePlate.toLowerCase().includes(q) ||
+              l.description.toLowerCase().includes(q) ||
+              l.category.toLowerCase().includes(q) ||
+              l.priority.toLowerCase().includes(q)
+            );
+          }
 
           return (
             <div 

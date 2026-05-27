@@ -25,12 +25,14 @@ interface ServiceHistoryViewProps {
   serviceOrders: ServiceOrder[];
   setServiceOrders: React.Dispatch<React.SetStateAction<ServiceOrder[]>>;
   onNewOrderClick?: () => void;
+  searchQuery?: string;
 }
 
 export default function ServiceHistoryView({
   serviceOrders,
   setServiceOrders,
-  onNewOrderClick
+  onNewOrderClick,
+  searchQuery = ''
  }: ServiceHistoryViewProps) {
   const [selectedOrder, setSelectedOrder] = useState<ServiceOrder | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -85,9 +87,24 @@ export default function ServiceHistoryView({
   };
 
   // Filter service orders by status
-  const filteredOrders = statusFilter === 'ALL' 
+  let filteredOrders = statusFilter === 'ALL' 
     ? serviceOrders 
     : serviceOrders.filter(o => o.status === statusFilter);
+
+  // Filter service orders by keyword
+  if (searchQuery && searchQuery.trim() !== '') {
+    const q = searchQuery.toLowerCase();
+    filteredOrders = filteredOrders.filter(o => 
+      o.id.toLowerCase().includes(q) ||
+      o.customerName.toLowerCase().includes(q) ||
+      o.vehicleBrand.toLowerCase().includes(q) ||
+      o.vehicleModel.toLowerCase().includes(q) ||
+      o.vehiclePlate.toLowerCase().includes(q) ||
+      o.description.toLowerCase().includes(q) ||
+      (o.notes && o.notes.toLowerCase().includes(q)) ||
+      o.items.some(item => item.description.toLowerCase().includes(q))
+    );
+  }
 
   // Quick status updates from history dashboard
   const handleUpdateStatus = (orderId: string, newStatus: ServiceOrder['status']) => {
