@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, User, Plus, X, Menu } from 'lucide-react';
+import { User, Plus, X, Menu } from 'lucide-react';
 
 interface NavbarProps {
   activeSection: string;
@@ -112,29 +112,7 @@ export default function Navbar({
       </div>
 
       {/* Global Controls & Actions */}
-      <div id="nav-actions-group" className="flex items-center justify-between md:justify-end gap-3 sm:gap-5 w-full md:w-auto">
-        {/* Search Input Bar */}
-        <div id="search-input-wrapper" className="relative flex-1 sm:flex-initial sm:w-48 lg:w-64">
-          <input
-            id="global-search-input"
-            type="text"
-            placeholder="Buscar..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-800 focus:border-red-500 text-xs font-sans rounded-lg pl-8 pr-7 py-2.5 text-zinc-100 outline-none transition-all placeholder:text-zinc-500 focus:ring-1 focus:ring-red-500/20"
-          />
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-3 text-zinc-500" />
-          {searchQuery && (
-            <button 
-              id="clear-search-btn"
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-3 text-zinc-400 hover:text-red-400"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-
+      <div id="nav-actions-group" className="flex items-center justify-end gap-3 sm:gap-5 ml-auto">
         {/* Quick Add Customer button */}
         <button
           id="btn-add-customer-quick"
