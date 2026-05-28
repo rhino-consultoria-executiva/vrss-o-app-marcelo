@@ -241,7 +241,7 @@ DROP POLICY IF EXISTS "Allow logged-in users full access to customers" ON custom
 CREATE POLICY "Allow logged-in users full access to customers"
   ON customers
   FOR ALL
-  TO anon, authenticated
+  TO authenticated
   USING (true)
   WITH CHECK (true);
 
@@ -250,7 +250,7 @@ DROP POLICY IF EXISTS "Allow logged-in users full access to leads" ON leads;
 CREATE POLICY "Allow logged-in users full access to leads"
   ON leads
   FOR ALL
-  TO anon, authenticated
+  TO authenticated
   USING (true)
   WITH CHECK (true);
 
@@ -259,7 +259,7 @@ DROP POLICY IF EXISTS "Allow logged-in users full access to service_orders" ON s
 CREATE POLICY "Allow logged-in users full access to service_orders"
   ON service_orders
   FOR ALL
-  TO anon, authenticated
+  TO authenticated
   USING (true)
   WITH CHECK (true);
 
@@ -268,7 +268,7 @@ DROP POLICY IF EXISTS "Allow logged-in users full access to inventory" ON invent
 CREATE POLICY "Allow logged-in users full access to inventory"
   ON inventory
   FOR ALL
-  TO anon, authenticated
+  TO authenticated
   USING (true)
   WITH CHECK (true);
 
@@ -277,7 +277,7 @@ DROP POLICY IF EXISTS "Allow logged-in users full access to funnel_stages" ON fu
 CREATE POLICY "Allow logged-in users full access to funnel_stages"
   ON funnel_stages
   FOR ALL
-  TO anon, authenticated
+  TO authenticated
   USING (true)
   WITH CHECK (true);
 

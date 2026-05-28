@@ -111,10 +111,9 @@ export default function App() {
   const [customSupabaseKey, setCustomSupabaseKey] = useState(() => getSupabaseConfig().key);
   const [supabaseLoading, setSupabaseLoading] = useState(false);
   const [supabaseStatusMsg, setSupabaseStatusMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-  const [supabaseLoadError, setSupabaseLoadError] = useState<string | null>(null);
 
   // Dynamic DB Migration States
-  const [dbConnectionString, setDbConnectionString] = useState('postgresql://postgres:[YOUR-PASSWORD]@db.jguexlunvzaiokcdelvy.supabase.co:5432/postgres');
+  const [dbConnectionString, setDbConnectionString] = useState('postgresql://postgres:[YOUR-PASSWORD]@db.qwniodqdhhzbobbupxyf.supabase.co:5432/postgres');
   const [migrationLoading, setMigrationLoading] = useState(false);
   const [migrationStatus, setMigrationStatus] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
@@ -136,7 +135,6 @@ export default function App() {
         setInventoryRaw(cloudInv);
 
         setDbSource('Supabase');
-        setSupabaseLoadError(null);
         setSupabaseStatusMsg({
           type: 'success',
           text: 'Conexão estabelecida! O CRM foi sincronizado com as tabelas do novo Supabase.'
@@ -149,7 +147,6 @@ export default function App() {
     } catch (e: any) {
       console.error(e);
       setDbSource('LocalStorage');
-      setSupabaseLoadError(e.message || String(e));
       setSupabaseStatusMsg({
         type: 'error',
         text: `Erro ao conectar: ${e.message || 'Verifique as tabelas e políticas RLS no seu projeto. Retornando ao LocalStorage Offline.'}`
@@ -412,7 +409,6 @@ export default function App() {
           setInventoryRaw(cloudInv);
           setFunnelStagesRaw(cloudStages);
           setDbSource('Supabase');
-          setSupabaseLoadError(null);
 
           // Hot backup local storage syncing
           localStorage.setItem('mc_crm_customers', JSON.stringify(cloudCust));
@@ -420,9 +416,8 @@ export default function App() {
           localStorage.setItem('mc_crm_service_orders', JSON.stringify(cloudOrders));
           localStorage.setItem('mc_crm_inventory', JSON.stringify(cloudInv));
           localStorage.setItem('mc_crm_funnel_stages', JSON.stringify(cloudStages));
-        } catch (e: any) {
+        } catch (e) {
           console.warn('Supabase offline or table missing, using localStorage fallback. Err:', e);
-          setSupabaseLoadError(e.message || String(e));
           loadFromLocalStorage();
         } finally {
           isInitialLoadCompleted.current = true;
@@ -628,6 +623,7 @@ export default function App() {
               funnelStages={funnelStages}
               setFunnelStages={setFunnelStages}
               inventory={inventory}
+              searchQuery={searchQuery}
             />
           )}
 
@@ -636,6 +632,7 @@ export default function App() {
               serviceOrders={serviceOrders}
               setServiceOrders={setServiceOrders}
               onNewOrderClick={() => setIsOSModalOpen(true)}
+              searchQuery={searchQuery}
             />
           )}
 
@@ -669,6 +666,7 @@ export default function App() {
               serviceOrders={serviceOrders}
               setServiceOrders={setServiceOrders}
               onNewOrderClick={() => setIsOSModalOpen(true)}
+              searchQuery={searchQuery}
             />
           )}
 
@@ -744,15 +742,6 @@ export default function App() {
                     <p className="text-xs text-zinc-400 leading-relaxed font-sans">
                       O sistema vem preparado com suporte nativo e migrações SQL completas para <strong>Supabase (PostgreSQL)</strong>. No momento, o app está operando em modo offline persistindo dados diretamente no navegador via <code className="text-zinc-300 font-mono bg-zinc-900 px-1 py-0.5 rounded">localStorage</code> para que você não perca seu trabalho.
                     </p>
-                    {supabaseLoadError && (
-                      <div className="bg-red-950/20 border border-red-500/15 p-3 rounded-lg text-red-400 font-mono text-[10px] space-y-1 mt-1 leading-relaxed">
-                        <span className="font-bold uppercase tracking-wider block text-red-500">Erro de Sincronização Supabase:</span>
-                        <p className="break-all">{supabaseLoadError}</p>
-                        <p className="text-zinc-500 mt-1.5 text-[9px] font-sans">
-                          Dica: Se as tabelas ainda não foram criadas ou as políticas anteriores de RLS eram muito restritivas, preencha o campo &quot;URI de conexão PostgreSQL&quot; abaixo com a sua senha e clique em &quot;EXECUTAR MIGRAÇÃO SUPREMA AGORA&quot; para recriá-las e atualizar as regras de segurança automaticamente.
-                        </p>
-                      </div>
-                    )}
                   </div>
                 )}
 

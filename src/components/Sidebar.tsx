@@ -86,7 +86,8 @@ export default function Sidebar({
           <button
             id="btn-new-order-quick"
             onClick={onNewOrderClick}
-            className="w-full bg-red-650 hover:bg-red-705 text-white font-mono text-xs font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 uppercase tracking-wider shadow-sm active:scale-[0.98] cursor-pointer"
+            translate="no"
+            className="notranslate w-full bg-red-650 hover:bg-red-705 text-white font-mono text-xs font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 uppercase tracking-wider shadow-sm active:scale-[0.98] cursor-pointer"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             Nova Ordem de Serviço
