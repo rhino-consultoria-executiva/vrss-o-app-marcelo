@@ -25,14 +25,12 @@ interface ServiceHistoryViewProps {
   serviceOrders: ServiceOrder[];
   setServiceOrders: React.Dispatch<React.SetStateAction<ServiceOrder[]>>;
   onNewOrderClick?: () => void;
-  searchQuery?: string;
 }
 
 export default function ServiceHistoryView({
   serviceOrders,
   setServiceOrders,
-  onNewOrderClick,
-  searchQuery = ''
+  onNewOrderClick
  }: ServiceHistoryViewProps) {
   const [selectedOrder, setSelectedOrder] = useState<ServiceOrder | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -87,24 +85,9 @@ export default function ServiceHistoryView({
   };
 
   // Filter service orders by status
-  let filteredOrders = statusFilter === 'ALL' 
+  const filteredOrders = statusFilter === 'ALL' 
     ? serviceOrders 
     : serviceOrders.filter(o => o.status === statusFilter);
-
-  // Filter service orders by keyword
-  if (searchQuery && searchQuery.trim() !== '') {
-    const q = searchQuery.toLowerCase();
-    filteredOrders = filteredOrders.filter(o => 
-      o.id.toLowerCase().includes(q) ||
-      o.customerName.toLowerCase().includes(q) ||
-      o.vehicleBrand.toLowerCase().includes(q) ||
-      o.vehicleModel.toLowerCase().includes(q) ||
-      o.vehiclePlate.toLowerCase().includes(q) ||
-      o.description.toLowerCase().includes(q) ||
-      (o.notes && o.notes.toLowerCase().includes(q)) ||
-      o.items.some(item => item.description.toLowerCase().includes(q))
-    );
-  }
 
   // Quick status updates from history dashboard
   const handleUpdateStatus = (orderId: string, newStatus: ServiceOrder['status']) => {
@@ -172,86 +155,32 @@ ${divider}
   };
 
   // PDF proposal download (A4 high-quality format)
-  const handleDownloadPdf = async (order: ServiceOrder, type: 'orçamento' | 'recibo') => {
+  const handleDownloadPdf = (order: ServiceOrder, type: 'orçamento' | 'recibo') => {
     const doc = new jsPDF();
-    
-    // Load Logo Base64
-    const logoUrl = 'https://lh3.googleusercontent.com/d/1XOJO43B_azZaN1Ruy1nIW21diyXsFxUq';
-    let logoBase64: string | null = null;
-    try {
-      logoBase64 = await new Promise<string | null>((resolve) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.src = logoUrl;
-        img.onload = () => {
-          try {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.naturalWidth;
-            canvas.height = img.naturalHeight;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.drawImage(img, 0, 0);
-              resolve(canvas.toDataURL('image/png'));
-            } else {
-              resolve(null);
-            }
-          } catch (e) {
-            resolve(null);
-          }
-        };
-        img.onerror = () => resolve(null);
-        // Force timeout in case connection hangs
-        setTimeout(() => resolve(null), 2500);
-      });
-    } catch (e) {
-      console.error('Failed to load logo image:', e);
-    }
     
     // Draw background & accent bands
     doc.setFillColor(24, 24, 27); // Zinc 900
     doc.rect(0, 0, 210, 42, 'F');
     
-    // Performance red thin band
-    doc.setFillColor(220, 38, 38); // Red 600
-    doc.rect(0, 41, 210, 2, 'F');
+    // Brand Header
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(18);
+    doc.text("MC AUTOMECANICA & PERFORMANCE", 15, 18);
     
-    if (logoBase64) {
-      // Draw Logo elegantly with white container
-      doc.setFillColor(255, 255, 255);
-      doc.rect(14, 8, 24, 24, 'F');
-      doc.addImage(logoBase64, 'PNG', 15, 9, 22, 22);
-      
-      // Brand Header shifted to the right
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(16);
-      doc.text("MC AUTOMECÂNICA & PERFORMANCE", 44, 18);
-      
-      doc.setFont("Helvetica", "normal");
-      doc.setFontSize(8.5);
-      doc.text("CNPJ: 45.109.844/0001-92 - Fone: (11) 98765-4321", 44, 25);
-      doc.text("Email: adm@mcautomecanica.com.br | São Paulo - SP", 44, 31);
-    } else {
-      // Brand Header (traditional fallback)
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(18);
-      doc.text("MC AUTOMECÂNICA & PERFORMANCE", 15, 18);
-      
-      doc.setFont("Helvetica", "normal");
-      doc.setFontSize(8.5);
-      doc.text("CNPJ: 45.109.844/0001-92 - Fone: (11) 98765-4321", 15, 26);
-      doc.text("Email: adm@mcautomecanica.com.br | São Paulo - SP", 15, 32);
-    }
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.text("CNPJ: 45.109.844/0001-92 - Fone: (11) 98765-4321", 15, 26);
+    doc.text("Email: adm@mcautomecanica.com.br | Sao Paulo - SP", 15, 32);
     
     // Header Badge Card
-    doc.setFillColor(220, 38, 38); // Red-600
+    doc.setFillColor(239, 68, 68); // Red-500
     doc.rect(142, 10, 53, 22, 'F');
     
     doc.setTextColor(255, 255, 255);
     doc.setFont("Helvetica", "bold");
     doc.setFontSize(11);
-    const titleText = type === 'orçamento' ? 'ORÇAMENTO' : 'RECIBO OFICIAL';
+    const titleText = type === 'orçamento' ? 'ORCAMENTO' : 'RECIBO OFICIAL';
     doc.text(titleText, 147, 18);
     
     doc.setFont("Helvetica", "normal");
@@ -259,96 +188,68 @@ ${divider}
     doc.text(`REF: OS-${order.id}`, 147, 26);
     
     // Client & Vehicle Card Row
-    // Left performance pill accent
-    doc.setFillColor(220, 38, 38); // Red-600
-    doc.rect(15, 49.5, 2.5, 5.5, 'F');
-    
-    doc.setTextColor(24, 24, 27); // Zinc-900
+    doc.setTextColor(30, 30, 30);
     doc.setFont("Helvetica", "bold");
     doc.setFontSize(11);
-    doc.text("DADOS DO CLIENTE E VEÍCULO", 20, 54.5);
+    doc.text("DADOS DO CLIENTE E VEICULO", 15, 54);
     
     doc.setDrawColor(228, 228, 231); // light divider
-    doc.line(15, 58, 195, 58);
+    doc.line(15, 57, 195, 57);
     
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(9);
     
     // Left column
     doc.setFont("Helvetica", "bold");
-    doc.setTextColor(113, 113, 122); // Zinc 500
-    doc.text("Cliente:", 15, 66);
+    doc.text("Cliente:", 15, 65);
     doc.setFont("Helvetica", "normal");
-    doc.setTextColor(39, 39, 42); // Zinc 800
-    doc.text(order.customerName, 30, 66);
+    doc.text(order.customerName, 30, 65);
     
     doc.setFont("Helvetica", "bold");
-    doc.setTextColor(113, 113, 122);
-    doc.text("Sintoma:", 15, 73);
+    doc.text("Sintoma:", 15, 72);
     doc.setFont("Helvetica", "normal");
-    doc.setTextColor(39, 39, 42);
     const safeDesc = order.description.length > 70 ? order.description.substring(0, 70) + "..." : order.description;
-    doc.text(safeDesc, 32, 73);
+    doc.text(safeDesc, 32, 72);
     
     doc.setFont("Helvetica", "bold");
-    doc.setTextColor(113, 113, 122);
-    doc.text("Emissão:", 15, 80);
+    doc.text("Emissao:", 15, 79);
     doc.setFont("Helvetica", "normal");
-    doc.setTextColor(39, 39, 42);
-    doc.text(order.dateCreated, 32, 80);
+    doc.text(order.dateCreated, 32, 79);
     
     // Right column
     doc.setFont("Helvetica", "bold");
-    doc.setTextColor(113, 113, 122);
-    doc.text("Veículo:", 110, 66);
+    doc.text("Veiculo:", 110, 65);
     doc.setFont("Helvetica", "normal");
-    doc.setTextColor(39, 39, 42);
-    doc.text(`${order.vehicleBrand} ${order.vehicleModel}`, 125, 66);
+    doc.text(`${order.vehicleBrand} ${order.vehicleModel}`, 125, 65);
     
     doc.setFont("Helvetica", "bold");
-    doc.setTextColor(113, 113, 122);
-    doc.text("Placa:", 110, 73);
-    doc.setFont("Helvetica", "bold");
-    doc.setTextColor(185, 28, 28); // Premium red for plate number
-    doc.text(order.vehiclePlate, 122, 73);
+    doc.text("Placa:", 110, 72);
+    doc.setFont("Helvetica", "normal");
+    doc.text(order.vehiclePlate, 122, 72);
     
     doc.setFont("Helvetica", "bold");
-    doc.setTextColor(113, 113, 122);
-    doc.text("Estágio:", 110, 80);
+    doc.text("Estagio:", 110, 79);
     doc.setFont("Helvetica", "normal");
-    doc.setTextColor(39, 39, 42);
-    doc.text(order.status.toUpperCase(), 125, 80);
+    doc.text(order.status.toUpperCase(), 125, 79);
     
     // Items table header
-    // Left performance pill accent
-    doc.setFillColor(220, 38, 38);
-    doc.rect(15, 91.5, 2.5, 5.5, 'F');
-    
-    doc.setTextColor(24, 24, 27);
     doc.setFont("Helvetica", "bold");
     doc.setFontSize(11);
-    doc.text("PEÇAS, COMPONENTES E MÃO DE OBRA", 20, 96.5);
+    doc.text("PECAS, COMPONENTES E MAO DE OBRA", 15, 96);
     
-    doc.setDrawColor(228, 228, 231);
-    doc.line(15, 100, 195, 100);
+    doc.line(15, 99, 195, 99);
     
     // Grid Header background
     doc.setFillColor(244, 244, 245);
-    doc.rect(15, 103, 180, 8, 'F');
-    // Header borders
-    doc.setDrawColor(228, 228, 231);
-    doc.line(15, 103, 195, 103);
-    doc.line(15, 111, 195, 111);
-    
+    doc.rect(15, 102, 180, 8, 'F');
     doc.setFontSize(8.5);
-    doc.setFont("Helvetica", "bold");
     doc.setTextColor(113, 113, 122);
-    doc.text("Descrição das Peças e Serviços", 18, 108.5);
-    doc.text("Qtd", 140, 108.5);
-    doc.text("Valor Unit.", 153, 108.5);
-    doc.text("Valor Total", 175, 108.5);
+    doc.text("Descricao das Pecas e Servicos", 18, 107.5);
+    doc.text("Qtd", 140, 107.5);
+    doc.text("Valor Unit.", 153, 107.5);
+    doc.text("Valor Total", 175, 107.5);
     
-    let currentY = 118;
+    let currentY = 117;
     doc.setTextColor(39, 39, 42);
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(9);
@@ -358,11 +259,9 @@ ${divider}
         doc.addPage();
         currentY = 25;
       }
-      doc.setFont("Helvetica", "normal");
       doc.text(item.description, 18, currentY);
       doc.text(item.quantity.toString(), 141, currentY);
       doc.text(formatBRL(item.price), 153, currentY);
-      doc.setFont("Helvetica", "bold");
       doc.text(formatBRL(item.price * item.quantity), 175, currentY);
       
       doc.setDrawColor(244, 244, 245);
@@ -372,7 +271,7 @@ ${divider}
     
     if (order.items.length === 0) {
       doc.setFont("Helvetica", "italic");
-      doc.text("Nenhuma peça ou serviço registrado nesta O.S.", 18, currentY);
+      doc.text("Nenhuma peca ou servico registrado nesta O.S.", 18, currentY);
       currentY += 10;
     }
     
@@ -380,7 +279,7 @@ ${divider}
     currentY += 4;
     doc.setFillColor(254, 242, 242);
     doc.rect(120, currentY, 75, 12, 'F');
-    doc.setDrawColor(220, 38, 38);
+    doc.setDrawColor(239, 68, 68);
     doc.rect(120, currentY, 75, 12, 'S');
     
     doc.setTextColor(185, 28, 28);
@@ -389,28 +288,22 @@ ${divider}
     const totalLabel = type === 'orçamento' ? "TOTAL ESTIMADO:" : "TOTAL QUITADO:";
     doc.text(totalLabel, 123, currentY + 7.5);
     
-    doc.setFontSize(11);
-    doc.text(formatBRL(order.totalValue), 158, currentY + 7.5);
+    doc.setFontSize(10.5);
+    doc.text(formatBRL(order.totalValue), 156, currentY + 7.5);
     
     // Observations
     if (order.notes) {
-      currentY += 18;
+      currentY += 22;
       if (currentY > 240) {
         doc.addPage();
         currentY = 25;
       }
-      
-      // Observations pill accent
-      doc.setFillColor(220, 38, 38);
-      doc.rect(15, currentY - 5, 2.5, 5.5, 'F');
-      
-      doc.setTextColor(24, 24, 27);
+      doc.setTextColor(63, 63, 70);
       doc.setFont("Helvetica", "bold");
       doc.setFontSize(9.5);
-      doc.text("OBSERVAÇÕES E NOTAS TÉCNICAS:", 20, currentY);
+      doc.text("OBSERVACOES E NOTAS TECNICAS:", 15, currentY);
       
       doc.setFont("Helvetica", "normal");
-      doc.setTextColor(82, 82, 91);
       doc.setFontSize(8.5);
       const wrappedNotes = doc.splitTextToSize(order.notes, 175);
       doc.text(wrappedNotes, 15, currentY + 5.5);
@@ -431,30 +324,24 @@ ${divider}
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(7.5);
     if (type === 'orçamento') {
-      doc.text("* Orçamento válido por 10 dias úteis. Depende da assinatura para início das ações mecânicas.", 15, currentY + 4.5);
-      doc.text("* Garantia contratual aplicada de 90 dias com base no Código de Defesa do Consumidor brasileiro.", 15, currentY + 8);
+      doc.text("* Orcamento valido por 10 dias uteis. Depende da assinatura para inicio das acoes mecanicas.", 15, currentY + 4.5);
+      doc.text("* Garantia contratual aplicada de 90 dias com base no Codigo de Defesa do Consumidor brasileiro.", 15, currentY + 8);
     } else {
-      doc.text("* Certificado de entrega mecânica e satisfação. Carro livre para circulação rodoviária regular.", 15, currentY + 4.5);
-      doc.text("* Garantia assegurada de 90 dias sob mão de obra e peças descritas oficialmente nesta peça.", 15, currentY + 8);
+      doc.text("* Certificado de entrega mecanica e satisfacao. Carro livre para circulacao rodoviaria regular.", 15, currentY + 4.5);
+      doc.text("* Garantia assegurada de 90 dias sob mao de obra e pecas descritas oficialmente nesta peca.", 15, currentY + 8);
     }
     
     // Signatures blocks
     currentY += 20;
-    if (currentY > 270) {
+    if (currentY > 275) {
       doc.addPage();
       currentY = 30;
     }
-    
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.3);
     doc.line(20, currentY, 90, currentY);
     doc.line(120, currentY, 190, currentY);
     
-    doc.setFont("Helvetica", "bold");
-    doc.setFontSize(8);
-    doc.setTextColor(113, 113, 122);
-    doc.text("MC AUTOMECÂNICA AUTORIZADO", 23, currentY + 5);
-    doc.text("CLIENTE RESPONSÁVEL", 135, currentY + 5);
+    doc.text("MC AUTOMECANICA AUTORIZADO", 26, currentY + 4);
+    doc.text("CLIENTE RESPONSAVEL", 137, currentY + 4);
     
     // Save as PDF
     doc.save(`${type === 'orçamento' ? 'orcamento' : 'recibo'}_OS-${order.id}.pdf`);

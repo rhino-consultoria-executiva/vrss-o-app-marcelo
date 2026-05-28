@@ -623,7 +623,6 @@ export default function App() {
               funnelStages={funnelStages}
               setFunnelStages={setFunnelStages}
               inventory={inventory}
-              searchQuery={searchQuery}
             />
           )}
 
@@ -632,7 +631,6 @@ export default function App() {
               serviceOrders={serviceOrders}
               setServiceOrders={setServiceOrders}
               onNewOrderClick={() => setIsOSModalOpen(true)}
-              searchQuery={searchQuery}
             />
           )}
 
@@ -666,7 +664,6 @@ export default function App() {
               serviceOrders={serviceOrders}
               setServiceOrders={setServiceOrders}
               onNewOrderClick={() => setIsOSModalOpen(true)}
-              searchQuery={searchQuery}
             />
           )}
 
