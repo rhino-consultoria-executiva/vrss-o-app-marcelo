@@ -12,11 +12,22 @@ import {
   Layers,
   Wrench
 } from 'lucide-react';
-import { Customer, Lead, FunnelStage } from '../types';
+import { Customer, Lead, FunnelStage, ServiceOrder } from '../types';
+import { 
+  Calendar, 
+  ChevronDown, 
+  ChevronUp, 
+  FileText, 
+  CheckCircle,
+  Clock,
+  ExternalLink
+} from 'lucide-react';
 
 interface CustomerBaseViewProps {
   customers: Customer[];
   setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
+  serviceOrders: ServiceOrder[];
+  setServiceOrders: React.Dispatch<React.SetStateAction<ServiceOrder[]>>;
   searchQuery: string;
   brandsList: string[];
   setBrandsList: React.Dispatch<React.SetStateAction<string[]>>;
@@ -29,6 +40,8 @@ interface CustomerBaseViewProps {
 export default function CustomerBaseView({
   customers,
   setCustomers,
+  serviceOrders,
+  setServiceOrders,
   searchQuery,
   brandsList,
   setBrandsList,
@@ -42,6 +55,7 @@ export default function CustomerBaseView({
   const [selectedBrandFilter, setSelectedBrandFilter] = useState<string>('');
   const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [expandedOSId, setExpandedOSId] = useState<string | null>(null);
 
   // Deletion state
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
@@ -483,109 +497,312 @@ export default function CustomerBaseView({
 
       {/* CUSTOMER DISPLAY / DETAILS EDIT MODAL */}
       {editingCustomer && (
-        <div id="customer-details-modal" className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-lg w-full p-6 text-left space-y-5 relative shadow-2xl">
+        <div id="customer-details-modal" className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-5xl w-full p-6 text-left space-y-5 relative shadow-2xl my-8">
             <div className="flex justify-between items-start border-b border-zinc-800 pb-4">
               <div>
-                <h4 className="font-semibold text-base text-white uppercase tracking-tight">Editar Registro: {editingCustomer.name}</h4>
-                <p className="font-mono text-[10px] text-zinc-500 mt-0.5">Identificador do Cliente: {editingCustomer.id}</p>
+                <h4 className="font-semibold text-lg text-white uppercase tracking-tight flex items-center gap-2">
+                  <UserCheck className="w-5 h-5 text-red-500" />
+                  Perfil do Cliente & Histórico de O.S.
+                </h4>
+                <p className="font-mono text-[10px] text-zinc-500 mt-0.5">Identificador do Cliente: {editingCustomer.id} | {editingCustomer.name}</p>
               </div>
               <button 
-                onClick={() => setEditingCustomer(null)}
+                onClick={() => {
+                  setEditingCustomer(null);
+                  setExpandedOSId(null);
+                }}
                 className="w-8 h-8 rounded-lg bg-zinc-950 text-zinc-400 hover:text-white flex items-center justify-center border border-zinc-800 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="font-mono text-[9px] text-[#ab8987] uppercase">Nome Completo</label>
-                  <input
-                    type="text"
-                    value={editingCustomer.name}
-                    onChange={e => setEditingCustomer({ ...editingCustomer, name: e.target.value, avatarText: e.target.value.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase() })}
-                    className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="font-mono text-[9px] text-[#ab8987] uppercase">Endereço de E-mail</label>
-                  <input
-                    type="email"
-                    value={editingCustomer.email}
-                    onChange={e => setEditingCustomer({ ...editingCustomer, email: e.target.value })}
-                    className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded px-3 py-2 text-xs outline-none"
-                  />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 divide-y lg:divide-y-0 lg:divide-x divide-zinc-800">
+              
+              {/* Left Column: CRM Customer Details (Cols 5) */}
+              <div className="lg:col-span-5 space-y-4 pr-0 lg:pr-6 pb-6 lg:pb-0">
+                <h5 className="font-mono text-[10px] text-zinc-500 uppercase tracking-wider font-bold mb-3 border-b border-zinc-850 pb-1">
+                  Editar Cadastro CRM
+                </h5>
+                
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="font-mono text-[9px] text-[#ab8987] uppercase">Nome Completo</label>
+                    <input
+                      type="text"
+                      value={editingCustomer.name}
+                      onChange={e => setEditingCustomer({ ...editingCustomer, name: e.target.value, avatarText: e.target.value.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase() })}
+                      className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-mono text-[9px] text-[#ab8987] uppercase">Endereço de E-mail</label>
+                    <input
+                      type="email"
+                      value={editingCustomer.email}
+                      onChange={e => setEditingCustomer({ ...editingCustomer, email: e.target.value })}
+                      className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded px-3 py-2 text-xs outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="font-mono text-[9px] text-[#ab8987] uppercase">Número de Telefone</label>
+                      <input
+                        type="text"
+                        value={editingCustomer.phone}
+                        onChange={e => setEditingCustomer({ ...editingCustomer, phone: e.target.value })}
+                        className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded px-3 py-2 text-xs outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="font-mono text-[9px] text-[#ab8987] uppercase">Status de Fidelidade</label>
+                      <select
+                        value={editingCustomer.status}
+                        onChange={e => setEditingCustomer({ ...editingCustomer, status: e.target.value as Customer['status'] })}
+                        className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded px-3 py-2 text-xs outline-none"
+                      >
+                        <option value="VIP">VIP</option>
+                        <option value="ATIVO">ATIVO</option>
+                        <option value="INATIVO">INATIVO</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* CAR DETAILS BOX */}
+                  <div className="space-y-2 bg-[#111415] p-3 rounded-lg border border-[#2d2d2d]">
+                    <p className="font-mono text-[9px] text-zinc-400 uppercase tracking-wider font-bold mb-1">Veículo do Cliente</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="space-y-1">
+                        <label className="font-mono text-[8px] text-[#ab8987] uppercase">Marca</label>
+                        <input
+                          type="text"
+                          value={editingCustomer.vehicleBrand}
+                          onChange={e => setEditingCustomer({ ...editingCustomer, vehicleBrand: e.target.value })}
+                          className="w-full bg-[#1a1a1a] border border-[#2d2d2d] text-white rounded px-2 py-1 text-xs outline-none uppercase"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="font-mono text-[8px] text-[#ab8987] uppercase">Modelo</label>
+                        <input
+                          type="text"
+                          value={editingCustomer.vehicleModel}
+                          onChange={e => setEditingCustomer({ ...editingCustomer, vehicleModel: e.target.value })}
+                          className="w-full bg-[#1a1a1a] border border-[#2d2d2d] text-white rounded px-2 py-1 text-xs outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="font-mono text-[8px] text-[#ab8987] uppercase">Placa</label>
+                        <input
+                          type="text"
+                          value={editingCustomer.vehiclePlate}
+                          onChange={e => setEditingCustomer({ ...editingCustomer, vehiclePlate: e.target.value.toUpperCase() })}
+                          className="w-full bg-[#1a1a1a] border border-[#2d2d2d] text-white rounded px-2 py-1 text-xs outline-none uppercase"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1 pt-1">
+                      <label className="font-mono text-[8px] text-[#ab8987] uppercase">Ano</label>
+                      <input
+                        type="number"
+                        value={editingCustomer.vehicleYear}
+                        onChange={e => setEditingCustomer({ ...editingCustomer, vehicleYear: parseInt(e.target.value) || new Date().getFullYear() })}
+                        className="w-full bg-[#1a1a1a] border border-[#2d2d2d] text-white rounded px-2 py-1 text-xs outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-mono text-[9px] text-[#ab8987] uppercase">Faturamento Total no CRM (R$)</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={editingCustomer.totalSpent}
+                        onChange={e => setEditingCustomer({ ...editingCustomer, totalSpent: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded pl-8 pr-3 py-2 text-xs outline-none"
+                      />
+                      <span className="font-mono text-xs text-[#ab8987] absolute left-3 top-2.5">R$</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="font-mono text-[9px] text-[#ab8987] uppercase">Número de Telefone</label>
-                  <input
-                    type="text"
-                    value={editingCustomer.phone}
-                    onChange={e => setEditingCustomer({ ...editingCustomer, phone: e.target.value })}
-                    className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded px-3 py-2 text-xs outline-none"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="font-mono text-[9px] text-[#ab8987] uppercase">Status de Fidelidade</label>
-                  <select
-                    value={editingCustomer.status}
-                    onChange={e => setEditingCustomer({ ...editingCustomer, status: e.target.value as Customer['status'] })}
-                    className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded px-3 py-2 text-xs outline-none"
+              {/* Right Column: Service History (Cols 7) */}
+              <div className="lg:col-span-7 pt-4 lg:pt-0 pl-0 lg:pl-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-zinc-850 pb-2">
+                  <h5 className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider font-bold">
+                    Histórico de Serviços do Veículo
+                  </h5>
+                  <button
+                    type="button"
+                    onClick={() => onNewOrderClick?.(editingCustomer.id)}
+                    className="bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 hover:border-indigo-500 text-indigo-400 hover:text-white font-mono text-[9px] font-bold px-2.5 py-1 rounded transition-all cursor-pointer flex items-center gap-1 uppercase tracking-wider"
                   >
-                    <option value="VIP">VIP</option>
-                    <option value="ATIVO">ATIVO</option>
-                    <option value="INATIVO">INATIVO</option>
-                  </select>
+                    <Wrench className="w-3 h-3" />
+                    + Nova O.S.
+                  </button>
                 </div>
+
+                {/* Filter and render OS list linked with this user's plate or id */}
+                {(() => {
+                  const clientOrders = serviceOrders.filter(o => 
+                    (o.customerId && o.customerId === editingCustomer.id) || 
+                    (editingCustomer.vehiclePlate && o.vehiclePlate?.toUpperCase() === editingCustomer.vehiclePlate?.toUpperCase())
+                  );
+
+                  if (clientOrders.length === 0) {
+                    return (
+                      <div className="text-center py-10 bg-zinc-950 border border-zinc-850 rounded-lg p-6 space-y-2">
+                        <p className="text-zinc-500 text-xs font-sans">Nenhuma Ordem de Serviço cadastrada para este carro até o momento.</p>
+                        <p className="font-mono text-[9px] text-zinc-650 uppercase">As novas ordens emitidas para a placa "{editingCustomer.vehiclePlate || 'NÃO DEFINIDA'}" aparecerão aqui instantaneamente.</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-3 overflow-y-auto max-h-[50vh] pr-1.5 scrollbar-thin">
+                      {clientOrders.map((os) => {
+                        const isExpanded = expandedOSId === os.id;
+                        
+                        return (
+                          <div 
+                            key={os.id} 
+                            className={`border rounded-lg transition-all ${isExpanded ? 'bg-zinc-900 border-zinc-700' : 'bg-[#111415] border-[#222] hover:border-zinc-800'}`}
+                          >
+                            {/* Accordion Header */}
+                            <div 
+                              onClick={() => setExpandedOSId(isExpanded ? null : os.id)}
+                              className="p-3.5 flex items-center justify-between cursor-pointer select-none"
+                            >
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-xs font-bold text-white tracking-wider bg-zinc-950 border border-zinc-800 px-2 py-0.5 rounded">{os.id}</span>
+                                  <span className="font-mono text-[9px] text-zinc-500 flex items-center gap-1">
+                                    <Calendar className="w-3 h-3" />
+                                    {os.dateCreated}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-zinc-350 font-sans font-medium line-clamp-1">{os.description}</p>
+                              </div>
+
+                              <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                                <div className="text-right flex flex-col items-end gap-1">
+                                  <span className="font-mono text-xs font-bold text-amber-500 leading-none">{formatBRL(os.totalValue)}</span>
+                                  <span className={`font-mono text-[8px] px-2 py-0.5 rounded uppercase leading-none font-black tracking-widest ${
+                                    os.status === 'diagnostico' ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/20' :
+                                    os.status === 'aguardando_pecas' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                                    os.status === 'execucao' ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20' :
+                                    os.status === 'pronto' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                                    'bg-zinc-950 text-zinc-400 border border-zinc-800'
+                                  }`}>
+                                    {os.status === 'diagnostico' && 'DIAGNÓSTICO'}
+                                    {os.status === 'aguardando_pecas' && 'PEÇAS'}
+                                    {os.status === 'execucao' && 'EXECUÇÃO'}
+                                    {os.status === 'pronto' && 'PRONTO'}
+                                    {os.status === 'entregue' && 'ENTREGUE'}
+                                  </span>
+                                </div>
+                                <button 
+                                  onClick={() => setExpandedOSId(isExpanded ? null : os.id)}
+                                  className="text-zinc-500 hover:text-white p-1 rounded hover:bg-zinc-800 cursor-pointer"
+                                >
+                                  {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Accordion Content (Expanded) */}
+                            {isExpanded && (
+                              <div className="p-4 border-t border-zinc-800 bg-[#0f1112] text-xs space-y-4">
+                                
+                                {/* Parts & Services list */}
+                                {os.items && os.items.length > 0 && (
+                                  <div className="space-y-1.5">
+                                    <p className="font-mono text-[9px] text-zinc-500 uppercase tracking-widest font-black">Peças & Serviços Incluídos</p>
+                                    <div className="bg-zinc-950/80 rounded-lg p-2.5 border border-zinc-850/60 divide-y divide-zinc-900">
+                                      {os.items.map((item, idx) => (
+                                        <div key={idx} className="py-1.5 flex items-center justify-between font-sans">
+                                          <div className="space-y-0.5">
+                                            <p className="text-zinc-300 font-medium">{item.description}</p>
+                                            <p className="font-mono text-[9px] text-zinc-600 font-bold">Qtd: {item.quantity} x {formatBRL(item.price)}</p>
+                                          </div>
+                                          <span className="font-mono text-[11px] text-white font-bold">{formatBRL(item.quantity * item.price)}</span>
+                                        </div>
+                                      ))}
+                                      <div className="pt-2 flex justify-between font-mono font-bold text-zinc-400 text-[10px]">
+                                        <span>TOTAL CONSOLIDADO</span>
+                                        <span className="text-amber-500">{formatBRL(os.totalValue)}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Notes View */}
+                                <div className="space-y-1 bg-zinc-950 border border-zinc-850/60 rounded-lg p-3">
+                                  <p className="font-mono text-[9px] text-zinc-500 uppercase tracking-widest font-bold">Notas de Observação Técnica</p>
+                                  <textarea
+                                    value={os.notes || ''}
+                                    placeholder="Escreva anotações técnicas sobre este veículo ou serviço para consulta posterior..."
+                                    onChange={(e) => {
+                                      const updatedNotes = e.target.value;
+                                      setServiceOrders(prev => prev.map(item => item.id === os.id ? { ...item, notes: updatedNotes } : item));
+                                    }}
+                                    className="w-full bg-transparent text-zinc-300 py-1 text-xs outline-none focus:border-red-500 h-16 resize-none w-full scrollbar-none font-sans"
+                                  />
+                                </div>
+
+                                {/* Status control & delete row */}
+                                <div className="flex flex-wrap items-center justify-between gap-3 pt-2.5 border-t border-zinc-800">
+                                  
+                                  {/* Update status select */}
+                                  <div className="flex items-center gap-2 bg-zinc-950 p-1 rounded border border-zinc-850">
+                                    <span className="font-mono text-[9px] text-zinc-500 uppercase px-2">Atualizar Status</span>
+                                    <select
+                                      value={os.status}
+                                      onChange={(e) => {
+                                        const newStatus = e.target.value as ServiceOrder['status'];
+                                        setServiceOrders(prev => prev.map(item => item.id === os.id ? { ...item, status: newStatus } : item));
+                                      }}
+                                      className="bg-zinc-900 border-none text-zinc-200 py-1.5 px-2.5 rounded font-mono text-[10px] outline-none"
+                                    >
+                                      <option value="diagnostico">DIAGNÓSTICO</option>
+                                      <option value="aguardando_pecas">AGUARDANDO PEÇAS</option>
+                                      <option value="execucao">EM EXECUÇÃO</option>
+                                      <option value="pronto">PRONTO / TESTADO</option>
+                                      <option value="entregue">ENTREGUE</option>
+                                    </select>
+                                  </div>
+
+                                  {/* Delete OS */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (confirm(`Tem certeza de que deseja excluir permanentemente a Ordem de Serviço ${os.id}? Esta operação será definitiva no banco de dados.`)) {
+                                        setServiceOrders(prev => prev.filter(item => item.id !== os.id));
+                                        setExpandedOSId(null);
+                                      }
+                                    }}
+                                    className="text-red-400 hover:text-white hover:bg-red-950/20 font-mono text-[9px] uppercase px-3 py-1.5 border border-red-500/20 rounded transition-all cursor-pointer flex items-center gap-1 font-semibold"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    Excluir Registro O.S.
+                                  </button>
+
+                                </div>
+
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+
               </div>
 
-              <div className="grid grid-cols-3 gap-2 bg-[#111415] p-3 rounded border border-[#2d2d2d]">
-                <div className="space-y-1">
-                  <label className="font-mono text-[9px] text-[#ab8987] uppercase">Carro Marca</label>
-                  <input
-                    type="text"
-                    value={editingCustomer.vehicleBrand}
-                    onChange={e => setEditingCustomer({ ...editingCustomer, vehicleBrand: e.target.value })}
-                    className="w-full bg-[#1a1a1a] border border-[#2d2d2d] text-white rounded px-2 py-1.5 text-xs outline-none"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="font-mono text-[9px] text-[#ab8987] uppercase">Carro Modelo</label>
-                  <input
-                    type="text"
-                    value={editingCustomer.vehicleModel}
-                    onChange={e => setEditingCustomer({ ...editingCustomer, vehicleModel: e.target.value })}
-                    className="w-full bg-[#1a1a1a] border border-[#2d2d2d] text-white rounded px-2 py-1.5 text-xs outline-none"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="font-mono text-[9px] text-[#ab8987] uppercase">Placa</label>
-                  <input
-                    type="text"
-                    value={editingCustomer.vehiclePlate}
-                    onChange={e => setEditingCustomer({ ...editingCustomer, vehiclePlate: e.target.value.toUpperCase() })}
-                    className="w-full bg-[#1a1a1a] border border-[#2d2d2d] text-white rounded px-2 py-1.5 text-xs outline-none uppercase"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-mono text-[9px] text-[#ab8987] uppercase">Faturamento Total do Cliente no CRM (R$)</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={editingCustomer.totalSpent}
-                    onChange={e => setEditingCustomer({ ...editingCustomer, totalSpent: parseFloat(e.target.value) || 0 })}
-                    className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded pl-8 pr-3 py-2 text-xs outline-none"
-                  />
-                  <span className="font-mono text-xs text-[#ab8987] absolute left-3 top-2.5">R$</span>
-                </div>
-              </div>
             </div>
 
             <div className="flex gap-3 pt-4 border-t border-zinc-800 justify-end items-center">
@@ -598,7 +815,10 @@ export default function CustomerBaseView({
                 Excluir Cliente
               </button>
               <button
-                onClick={() => setEditingCustomer(null)}
+                onClick={() => {
+                  setEditingCustomer(null);
+                  setExpandedOSId(null);
+                }}
                 className="border border-zinc-800 text-zinc-400 hover:text-white font-mono text-xs py-2 px-4 rounded-lg cursor-pointer"
               >
                 Fechar

@@ -648,6 +648,8 @@ export default function App() {
             <CustomerBaseView 
               customers={customers}
               setCustomers={setCustomers}
+              serviceOrders={serviceOrders}
+              setServiceOrders={setServiceOrders}
               searchQuery={searchQuery}
               brandsList={brandsList}
               setBrandsList={setBrandsList}
