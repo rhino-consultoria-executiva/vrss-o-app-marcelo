@@ -114,6 +114,8 @@ CREATE TABLE IF NOT EXISTS inventory (
   price NUMERIC(12, 2) DEFAULT 0.00,
   compatibilities TEXT[] DEFAULT '{}'::text[],
   min_stock INTEGER DEFAULT 0,
+  cost NUMERIC(12, 2) DEFAULT 0.00,
+  margin NUMERIC(5, 2) DEFAULT 0.00,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

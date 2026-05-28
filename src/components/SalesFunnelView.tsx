@@ -91,24 +91,47 @@ export default function SalesFunnelView({
   };
 
   // Helper to relocate leads between stages with precise button bounds
-  const moveLead = (leadId: string, direction: 'prev' | 'next') => {
-    const stages = columns.map(col => col.id);
-    setLeads(prevLeads => prevLeads.map(lead => {
-      if (lead.id !== leadId) return lead;
-      const currentIndex = stages.indexOf(lead.stage);
-      let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
-      if (nextIndex < 0) nextIndex = 0;
-      if (nextIndex >= stages.length) nextIndex = stages.length - 1;
+  const moveLead = (leadId: string, direction: 'prev' | 'next'): boolean => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return false;
 
-      // When lead is moved to "approved", trigger OS creation
-      const updatedLead = { ...lead, stage: stages[nextIndex] };
-      if (stages[nextIndex] === 'approved' && lead.stage !== 'approved') {
+    const stages = columns.map(col => col.id);
+    const currentIndex = stages.indexOf(lead.stage);
+    let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+    if (nextIndex < 0) nextIndex = 0;
+    if (nextIndex >= stages.length) nextIndex = stages.length - 1;
+
+    const targetStage = stages[nextIndex];
+
+    if (targetStage === 'approved' && lead.stage !== 'approved') {
+      const hasBudget = lead.value !== undefined && lead.value !== null && Number(lead.value) > 0;
+      const validSourceStage = lead.stage === 'quotes' || lead.stage === 'negotiation';
+
+      if (!validSourceStage || !hasBudget) {
+        let errMsg = "";
+        if (!validSourceStage) {
+          errMsg = "Erro: O lead precisa passar pelas etapas de Orçamento ou Negociação antes de ser aprovado.";
+        } else {
+          errMsg = "Erro: Defina um valor de orçamento maior que zero antes de aprovar o lead.";
+        }
+        setFeedbackMsg(errMsg);
+        setTimeout(() => setFeedbackMsg(null), 5000);
+        return false;
+      }
+    }
+
+    setLeads(prevLeads => prevLeads.map(l => {
+      if (l.id !== leadId) return l;
+      const updatedLead = { ...l, stage: targetStage };
+      if (targetStage === 'approved' && l.stage !== 'approved') {
         setTimeout(() => {
           onApproveLeadToServiceOrder(updatedLead);
         }, 150);
       }
       return updatedLead;
     }));
+
+    return true;
   };
 
   // Call backend custom node server to run Gemini Smart diagnosis
@@ -998,8 +1021,10 @@ export default function SalesFunnelView({
                     {columns.findIndex(col => col.id === selectedLead.stage) < columns.length - 1 && (
                       <button
                         onClick={() => {
-                          moveLead(selectedLead.id, 'next');
-                          setSelectedLead(null);
+                          const success = moveLead(selectedLead.id, 'next');
+                          if (success) {
+                            setSelectedLead(null);
+                          }
                         }}
                         className="bg-indigo-600 hover:bg-indigo-700 text-white font-mono font-bold text-xs py-2 px-5 rounded-lg uppercase tracking-wider transition-all cursor-pointer"
                       >

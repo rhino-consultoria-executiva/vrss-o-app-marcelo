@@ -178,18 +178,25 @@ export const mapInventoryFromDb = (db: any): InventoryItem => ({
   price: parseFloat(db.price) || 0,
   compatibilities: Array.isArray(db.compatibilities) ? db.compatibilities : [],
   minStock: db.min_stock || 0,
+  cost: db.cost !== undefined ? parseFloat(db.cost) || 0 : undefined,
+  margin: db.margin !== undefined ? parseFloat(db.margin) || 0 : undefined,
 });
 
-export const mapInventoryToDb = (i: InventoryItem) => ({
-  id: i.id,
-  name: i.name,
-  category: i.category,
-  sku: i.sku,
-  quantity: i.quantity,
-  price: i.price,
-  compatibilities: i.compatibilities,
-  min_stock: i.minStock,
-});
+export const mapInventoryToDb = (i: InventoryItem) => {
+  const payload: any = {
+    id: i.id,
+    name: i.name,
+    category: i.category,
+    sku: i.sku,
+    quantity: i.quantity,
+    price: i.price,
+    compatibilities: i.compatibilities,
+    min_stock: i.minStock,
+  };
+  if (i.cost !== undefined) payload.cost = i.cost;
+  if (i.margin !== undefined) payload.margin = i.margin;
+  return payload;
+};
 
 // -------------------------------------------------------------
 // DATABASE PERSISTENCE LAYER OPERATIONS

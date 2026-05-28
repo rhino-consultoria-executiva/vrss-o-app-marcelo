@@ -67,6 +67,8 @@ export interface InventoryItem {
   price: number;
   compatibilities: string[];
   minStock: number;
+  cost?: number;
+  margin?: number;
 }
 
 export interface DashboardStats {

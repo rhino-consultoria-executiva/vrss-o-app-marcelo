@@ -27,16 +27,20 @@ export default function InventoryView({
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [editFormErrors, setEditFormErrors] = useState<Record<string, string>>({});
 
   // Form state for creating inventory parts
   const [newItemForm, setNewItemForm] = useState({
     name: '',
     category: 'Peças de Reposição' as InventoryItem['category'],
     sku: '',
-    quantity: 1,
-    price: 150.00,
+    quantity: '' as any,
+    price: '' as any,
+    cost: '' as any,
+    margin: '' as any,
     compatibilities: '',
-    minStock: 2
+    minStock: '' as any
   });
 
   // Category filter choices
@@ -81,8 +85,74 @@ export default function InventoryView({
 
   // Add Item to inventory list
   const handleCreateItem = () => {
-    if (!newItemForm.name || !newItemForm.sku) {
-      setFeedbackMsg("Erro: Favor inserir nome da peça e código SKU.");
+    const errors: Record<string, string> = {};
+    
+    if (!newItemForm.name.trim()) {
+      errors.name = "Nome comercial é obrigatório.";
+    }
+    if (!newItemForm.sku.trim()) {
+      errors.sku = "Código SKU é obrigatório.";
+    }
+    
+    // Validate quantity
+    if (newItemForm.quantity === undefined || newItemForm.quantity === null || newItemForm.quantity === '') {
+      errors.quantity = "Quantidade inicial é obrigatória.";
+    } else {
+      const q = Number(newItemForm.quantity);
+      if (isNaN(q)) {
+        errors.quantity = "Insira uma quantidade válida.";
+      } else if (q < 0) {
+        errors.quantity = "Quantidade não pode ser negativa.";
+      }
+    }
+
+    // Validate minStock
+    if (newItemForm.minStock === undefined || newItemForm.minStock === null || newItemForm.minStock === '') {
+      errors.minStock = "Alerta de estoque mínimo é obrigatório.";
+    } else {
+      const m = Number(newItemForm.minStock);
+      if (isNaN(m)) {
+        errors.minStock = "Insira uma quantidade válida.";
+      } else if (m < 0) {
+        errors.minStock = "O estoque mínimo não pode ser negativo.";
+      }
+    }
+
+    // Validate price
+    if (newItemForm.price === undefined || newItemForm.price === null || newItemForm.price === '') {
+      errors.price = "Preço de venda é obrigatório.";
+    } else {
+      const p = Number(newItemForm.price);
+      if (isNaN(p)) {
+        errors.price = "Insira um preço válido.";
+      } else if (p < 0) {
+        errors.price = "Preço de venda não pode ser negativo.";
+      }
+    }
+
+    // Validate cost
+    if (newItemForm.cost !== undefined && newItemForm.cost !== null && newItemForm.cost !== '') {
+      const c = Number(newItemForm.cost);
+      if (isNaN(c)) {
+        errors.cost = "Insira um custo válido.";
+      } else if (c < 0) {
+        errors.cost = "Preço de custo não pode ser negativo.";
+      }
+    }
+
+    // Validate margin
+    if (newItemForm.margin !== undefined && newItemForm.margin !== null && newItemForm.margin !== '') {
+      const mar = Number(newItemForm.margin);
+      if (isNaN(mar)) {
+        errors.margin = "Insira uma margem válida.";
+      } else if (mar < 0) {
+        errors.margin = "Margem de lucro não pode ser negativa.";
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      setFeedbackMsg("Erro: Verifique os campos do formulário.");
       setTimeout(() => setFeedbackMsg(null), 3000);
       return;
     }
@@ -93,24 +163,29 @@ export default function InventoryView({
       name: newItemForm.name,
       category: newItemForm.category,
       sku: newItemForm.sku.toUpperCase(),
-      quantity: Math.max(0, newItemForm.quantity),
-      price: Math.max(0, newItemForm.price),
+      quantity: Number(newItemForm.quantity),
+      price: Number(newItemForm.price),
       compatibilities: newItemForm.compatibilities.split(',').map(c => c.trim()).filter(Boolean),
-      minStock: Math.max(0, newItemForm.minStock)
+      minStock: Number(newItemForm.minStock),
+      cost: newItemForm.cost !== '' ? Number(newItemForm.cost) : undefined,
+      margin: newItemForm.margin !== '' ? Number(newItemForm.margin) : undefined
     };
 
     setInventory(prev => [...prev, freshItem]);
     setShowAddForm(false);
+    setFormErrors({});
     setFeedbackMsg(`Sucesso! Peça "${freshItem.name}" cadastrada.`);
     setTimeout(() => setFeedbackMsg(null), 3000);
     setNewItemForm({
       name: '',
       category: 'Peças de Reposição',
       sku: '',
-      quantity: 1,
-      price: 150.00,
+      quantity: '',
+      price: '',
+      cost: '',
+      margin: '',
       compatibilities: '',
-      minStock: 2
+      minStock: ''
     });
   };
 
@@ -295,7 +370,7 @@ export default function InventoryView({
                 <h4 className="font-semibold text-base text-white uppercase tracking-tight">Cadastrar Item no Estoque</h4>
                 <p className="font-mono text-[10px] text-zinc-500">Os novos produtos atualizam imediatamente o painel de ordens do supervisor</p>
               </div>
-              <button onClick={() => setShowAddForm(false)} className="text-zinc-400 hover:text-white cursor-pointer">
+              <button onClick={() => { setShowAddForm(false); setFormErrors({}); }} className="text-zinc-400 hover:text-white cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -308,8 +383,9 @@ export default function InventoryView({
                   placeholder="ex: Pastilha de Freio Brembo Blue-Series"
                   value={newItemForm.name}
                   onChange={e => setNewItemForm({ ...newItemForm, name: e.target.value })}
-                  className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]"
+                  className={`w-full bg-[#111415] border ${formErrors.name ? 'border-red-500' : 'border-[#2d2d2d]'} text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]`}
                 />
+                {formErrors.name && <p className="text-[10px] text-red-500 font-medium font-sans mt-0.5">{formErrors.name}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -320,8 +396,9 @@ export default function InventoryView({
                     placeholder="ex: BRM-FL-741"
                     value={newItemForm.sku}
                     onChange={e => setNewItemForm({ ...newItemForm, sku: e.target.value })}
-                    className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded px-3 py-2 text-xs font-mono outline-none uppercase"
+                    className={`w-full bg-[#111415] border ${formErrors.sku ? 'border-red-500' : 'border-[#2d2d2d]'} text-white rounded px-3 py-2 text-xs font-mono outline-none uppercase focus:border-[#ff535b]`}
                   />
+                  {formErrors.sku && <p className="text-[10px] text-red-500 font-medium font-sans mt-0.5">{formErrors.sku}</p>}
                 </div>
                 <div className="space-y-1">
                   <label className="font-mono text-[9px] text-[#ab8987] uppercase">Setor / Setor de Depósito</label>
@@ -339,33 +416,79 @@ export default function InventoryView({
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="font-mono text-[9px] text-[#ab8987] uppercase">Qtd Inicial</label>
                   <input
                     type="number"
                     value={newItemForm.quantity}
-                    onChange={e => setNewItemForm({ ...newItemForm, quantity: parseInt(e.target.value) || 0 })}
-                    className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded px-3 py-2 text-xs outline-none"
+                    placeholder="Qtd Inicial"
+                    onChange={e => {
+                      const val = e.target.value;
+                      setNewItemForm({ ...newItemForm, quantity: val === '' ? '' : parseInt(val, 10) } as any);
+                    }}
+                    className={`w-full bg-[#111415] border ${formErrors.quantity ? 'border-red-500' : 'border-[#2d2d2d]'} text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]`}
                   />
+                  {formErrors.quantity && <p className="text-[10px] text-red-500 font-medium font-sans mt-0.5">{formErrors.quantity}</p>}
                 </div>
                 <div className="space-y-1">
                   <label className="font-mono text-[9px] text-[#ab8987] uppercase">Alerta Mín.</label>
                   <input
                     type="number"
                     value={newItemForm.minStock}
-                    onChange={e => setNewItemForm({ ...newItemForm, minStock: parseInt(e.target.value) || 0 })}
-                    className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded px-3 py-2 text-xs outline-none"
+                    placeholder="Alerta Mín."
+                    onChange={e => {
+                      const val = e.target.value;
+                      setNewItemForm({ ...newItemForm, minStock: val === '' ? '' : parseInt(val, 10) } as any);
+                    }}
+                    className={`w-full bg-[#111415] border ${formErrors.minStock ? 'border-red-500' : 'border-[#2d2d2d]'} text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]`}
                   />
+                  {formErrors.minStock && <p className="text-[10px] text-red-500 font-medium font-sans mt-0.5">{formErrors.minStock}</p>}
                 </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
                 <div className="space-y-1">
                   <label className="font-mono text-[9px] text-[#ab8987] uppercase">Preço Venda (R$)</label>
                   <input
                     type="number"
                     value={newItemForm.price}
-                    onChange={e => setNewItemForm({ ...newItemForm, price: parseFloat(e.target.value) || 0 })}
-                    className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded px-3 py-2 text-xs outline-none"
+                    placeholder="Preço de Venda"
+                    onChange={e => {
+                      const val = e.target.value;
+                      setNewItemForm({ ...newItemForm, price: val === '' ? '' : parseFloat(val) } as any);
+                    }}
+                    className={`w-full bg-[#111415] border ${formErrors.price ? 'border-red-500' : 'border-[#2d2d2d]'} text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]`}
                   />
+                  {formErrors.price && <p className="text-[10px] text-red-500 font-medium font-sans mt-0.5">{formErrors.price}</p>}
+                </div>
+                <div className="space-y-1">
+                  <label className="font-mono text-[9px] text-[#ab8987] uppercase">Custo (R$)</label>
+                  <input
+                    type="number"
+                    value={newItemForm.cost}
+                    placeholder="Custo"
+                    onChange={e => {
+                      const val = e.target.value;
+                      setNewItemForm({ ...newItemForm, cost: val === '' ? '' : parseFloat(val) } as any);
+                    }}
+                    className={`w-full bg-[#111415] border ${formErrors.cost ? 'border-red-500' : 'border-[#2d2d2d]'} text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]`}
+                  />
+                  {formErrors.cost && <p className="text-[10px] text-red-500 font-medium font-sans mt-0.5">{formErrors.cost}</p>}
+                </div>
+                <div className="space-y-1">
+                  <label className="font-mono text-[9px] text-[#ab8987] uppercase">Margem (%)</label>
+                  <input
+                    type="number"
+                    value={newItemForm.margin}
+                    placeholder="Margem"
+                    onChange={e => {
+                      const val = e.target.value;
+                      setNewItemForm({ ...newItemForm, margin: val === '' ? '' : parseFloat(val) } as any);
+                    }}
+                    className={`w-full bg-[#111415] border ${formErrors.margin ? 'border-red-500' : 'border-[#2d2d2d]'} text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]`}
+                  />
+                  {formErrors.margin && <p className="text-[10px] text-red-500 font-medium font-sans mt-0.5">{formErrors.margin}</p>}
                 </div>
               </div>
 
@@ -383,7 +506,7 @@ export default function InventoryView({
 
             <div className="flex gap-3 pt-4 border-t border-zinc-850 justify-end">
               <button
-                onClick={() => setShowAddForm(false)}
+                onClick={() => { setShowAddForm(false); setFormErrors({}); }}
                 className="border border-zinc-800 text-zinc-400 hover:text-white font-mono text-xs py-2 px-4 rounded-lg cursor-pointer"
               >
                 Cancelar
@@ -408,7 +531,7 @@ export default function InventoryView({
                 <h4 className="font-semibold text-sm text-white uppercase tracking-tight">Editar Item estoque</h4>
                 <p className="font-mono text-[10px] text-zinc-500 mt-0.5">{editingItem.sku}</p>
               </div>
-              <button onClick={() => setEditingItem(null)} className="text-zinc-400 hover:text-white cursor-pointer">
+              <button onClick={() => { setEditingItem(null); setEditFormErrors({}); }} className="text-zinc-400 hover:text-white cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -420,18 +543,24 @@ export default function InventoryView({
                   type="text"
                   value={editingItem.name}
                   onChange={e => setEditingItem({ ...editingItem, name: e.target.value })}
-                  className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]"
+                  className={`w-full bg-[#111415] border ${editFormErrors.name ? 'border-red-500' : 'border-[#2d2d2d]'} text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]`}
                 />
+                {editFormErrors.name && <p className="text-[10px] text-red-500 mt-0.5">{editFormErrors.name}</p>}
               </div>
 
               <div className="space-y-1">
                 <label className="font-mono text-[9px] text-[#ab8987] uppercase">Preço Venda Unitário (R$)</label>
                 <input
                   type="number"
-                  value={editingItem.price}
-                  onChange={e => setEditingItem({ ...editingItem, price: parseFloat(e.target.value) || 0 })}
-                  className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]"
+                  placeholder="Preço de Venda"
+                  value={editingItem.price === undefined || editingItem.price === null ? '' : editingItem.price}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setEditingItem({ ...editingItem, price: val === '' ? '' : parseFloat(val) } as any);
+                  }}
+                  className={`w-full bg-[#111415] border ${editFormErrors.price ? 'border-red-500' : 'border-[#2d2d2d]'} text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]`}
                 />
+                {editFormErrors.price && <p className="text-[10px] text-red-500 mt-0.5">{editFormErrors.price}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -439,36 +568,153 @@ export default function InventoryView({
                   <label className="font-mono text-[9px] text-[#ab8987] uppercase">Disponível</label>
                   <input
                     type="number"
-                    value={editingItem.quantity}
-                    onChange={e => setEditingItem({ ...editingItem, quantity: parseInt(e.target.value) || 0 })}
-                    className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]"
+                    placeholder="Disponível"
+                    value={editingItem.quantity === undefined || editingItem.quantity === null ? '' : editingItem.quantity}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setEditingItem({ ...editingItem, quantity: val === '' ? '' : parseInt(val, 10) } as any);
+                    }}
+                    className={`w-full bg-[#111415] border ${editFormErrors.quantity ? 'border-red-500' : 'border-[#2d2d2d]'} text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]`}
                   />
+                  {editFormErrors.quantity && <p className="text-[10px] text-red-500 mt-0.5">{editFormErrors.quantity}</p>}
                 </div>
                 <div className="space-y-1">
                   <label className="font-mono text-[9px] text-[#ab8987] uppercase">Mínimo Alerta</label>
                   <input
                     type="number"
-                    value={editingItem.minStock}
-                    onChange={e => setEditingItem({ ...editingItem, minStock: parseInt(e.target.value) || 0 })}
-                    className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]"
+                    placeholder="Mínimo Alerta"
+                    value={editingItem.minStock === undefined || editingItem.minStock === null ? '' : editingItem.minStock}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setEditingItem({ ...editingItem, minStock: val === '' ? '' : parseInt(val, 10) } as any);
+                    }}
+                    className={`w-full bg-[#111415] border ${editFormErrors.minStock ? 'border-red-500' : 'border-[#2d2d2d]'} text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]`}
                   />
+                  {editFormErrors.minStock && <p className="text-[10px] text-red-500 mt-0.5">{editFormErrors.minStock}</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="font-mono text-[9px] text-[#ab8987] uppercase">Custo (custo)</label>
+                  <input
+                    type="number"
+                    placeholder="Custo"
+                    value={editingItem.cost === undefined || editingItem.cost === null ? '' : editingItem.cost}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setEditingItem({ ...editingItem, cost: val === '' ? '' : parseFloat(val) } as any);
+                    }}
+                    className={`w-full bg-[#111415] border ${editFormErrors.cost ? 'border-red-500' : 'border-[#2d2d2d]'} text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]`}
+                  />
+                  {editFormErrors.cost && <p className="text-[10px] text-red-500 mt-0.5">{editFormErrors.cost}</p>}
+                </div>
+                <div className="space-y-1">
+                  <label className="font-mono text-[9px] text-[#ab8987] uppercase">Margem (margem)</label>
+                  <input
+                    type="number"
+                    placeholder="Margem"
+                    value={editingItem.margin === undefined || editingItem.margin === null ? '' : editingItem.margin}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setEditingItem({ ...editingItem, margin: val === '' ? '' : parseFloat(val) } as any);
+                    }}
+                    className={`w-full bg-[#111415] border ${editFormErrors.margin ? 'border-red-500' : 'border-[#2d2d2d]'} text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]`}
+                  />
+                  {editFormErrors.margin && <p className="text-[10px] text-red-500 mt-0.5">{editFormErrors.margin}</p>}
                 </div>
               </div>
             </div>
 
             <div className="flex gap-3 pt-4 border-t border-zinc-855 justify-end">
               <button
-                onClick={() => setEditingItem(null)}
+                onClick={() => { setEditingItem(null); setEditFormErrors({}); }}
                 className="border border-zinc-800 text-zinc-400 hover:text-white font-mono text-xs py-2 px-4 rounded-lg cursor-pointer"
               >
                 Voltar
               </button>
               <button
                 onClick={() => {
-                  setInventory(prev => prev.map(i => i.id === editingItem.id ? editingItem : i));
+                  const errors: Record<string, string> = {};
+                  if (!editingItem.name.trim()) {
+                    errors.name = "Nome comercial é obrigatório.";
+                  }
+                  
+                  // Quantity
+                  if (editingItem.quantity === undefined || editingItem.quantity === null || (editingItem.quantity as any) === '') {
+                    errors.quantity = "Quantidade é obrigatória.";
+                  } else {
+                    const q = Number(editingItem.quantity);
+                    if (isNaN(q)) {
+                      errors.quantity = "Insira uma quantidade válida.";
+                    } else if (q < 0) {
+                      errors.quantity = "Quantidade não pode ser negativa.";
+                    }
+                  }
+
+                  // Min stock
+                  if (editingItem.minStock === undefined || editingItem.minStock === null || (editingItem.minStock as any) === '') {
+                    errors.minStock = "Alerta de estoque mínimo é obrigatório.";
+                  } else {
+                    const m = Number(editingItem.minStock);
+                    if (isNaN(m)) {
+                      errors.minStock = "Insira um estoque mínimo válido.";
+                    } else if (m < 0) {
+                      errors.minStock = "O estoque mínimo não pode ser negativo.";
+                    }
+                  }
+
+                  // Price
+                  if (editingItem.price === undefined || editingItem.price === null || (editingItem.price as any) === '') {
+                    errors.price = "Preço de venda é obrigatório.";
+                  } else {
+                    const p = Number(editingItem.price);
+                    if (isNaN(p)) {
+                      errors.price = "Insira um preço válido.";
+                    } else if (p < 0) {
+                      errors.price = "Preço de venda não pode ser negativo.";
+                    }
+                  }
+
+                  // Cost
+                  if (editingItem.cost !== undefined && editingItem.cost !== null && (editingItem.cost as any) !== '') {
+                    const c = Number(editingItem.cost);
+                    if (isNaN(c)) {
+                      errors.cost = "Insira um custo válido.";
+                    } else if (c < 0) {
+                      errors.cost = "Preço de custo não pode ser negativo.";
+                    }
+                  }
+
+                  // Margin
+                  if (editingItem.margin !== undefined && editingItem.margin !== null && (editingItem.margin as any) !== '') {
+                    const mar = Number(editingItem.margin);
+                    if (isNaN(mar)) {
+                      errors.margin = "Insira uma margem válida.";
+                    } else if (mar < 0) {
+                      errors.margin = "Margem de lucro não pode ser negativa.";
+                    }
+                  }
+
+                  if (Object.keys(errors).length > 0) {
+                    setEditFormErrors(errors);
+                    setFeedbackMsg("Erro: Valores inválidos ou negativos no estoque.");
+                    setTimeout(() => setFeedbackMsg(null), 3000);
+                    return;
+                  }
+
+                  setInventory(prev => prev.map(i => i.id === editingItem.id ? {
+                    ...editingItem,
+                    quantity: Number(editingItem.quantity),
+                    price: Number(editingItem.price),
+                    minStock: Number(editingItem.minStock),
+                    cost: editingItem.cost !== '' && editingItem.cost !== undefined && editingItem.cost !== null ? Number(editingItem.cost) : undefined,
+                    margin: editingItem.margin !== '' && editingItem.margin !== undefined && editingItem.margin !== null ? Number(editingItem.margin) : undefined
+                  } : i));
                   setEditingItem(null);
+                  setEditFormErrors({});
                 }}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-mono font-semibold text-xs py-2 px-5 rounded-lg uppercase tracking-wider cursor-pointer"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-mono font-semibold text-xs py-2 px-5 rounded-lg uppercase tracking-wider cursor-pointer font-black"
               >
                 Salvar Alterações
               </button>
