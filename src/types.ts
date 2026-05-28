@@ -51,7 +51,7 @@ export interface ServiceOrder {
   vehicleModel: string;
   vehiclePlate: string;
   description: string;
-  status: 'diagnostico' | 'aguardando_pecas' | 'execucao' | 'pronto' | 'entregue';
+  status: 'diagnostico' | 'aguardando_pecas' | 'execucao' | 'pronto' | 'entregue' | 'aguardando' | 'finalizado' | 'cancelado';
   totalValue: number;
   items: ServiceOrderItem[];
   dateCreated: string;

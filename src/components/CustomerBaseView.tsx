@@ -71,6 +71,40 @@ export default function CustomerBaseView({
   });
   const [funnelFeedback, setFunnelFeedback] = useState<string | null>(null);
 
+  // Helper functions for inline order items editing and recalculation in history
+  const updateOSItem = (orderId: string, itemIdx: number, field: 'description' | 'quantity' | 'price', value: any) => {
+    setServiceOrders(prev => prev.map(o => {
+      if (o.id !== orderId) return o;
+      const currentItems = o.items || [];
+      const newItems = currentItems.map((item, i) => {
+        if (i !== itemIdx) return item;
+        return { ...item, [field]: value };
+      });
+      const newTotal = newItems.reduce((acc, curr) => acc + (curr.quantity * curr.price), 0);
+      return { ...o, items: newItems, totalValue: newTotal };
+    }));
+  };
+
+  const addOSItem = (orderId: string) => {
+    setServiceOrders(prev => prev.map(o => {
+      if (o.id !== orderId) return o;
+      const currentItems = o.items || [];
+      const newItems = [...currentItems, { description: '', quantity: 1, price: 0 }];
+      const newTotal = newItems.reduce((acc, curr) => acc + (curr.quantity * curr.price), 0);
+      return { ...o, items: newItems, totalValue: newTotal };
+    }));
+  };
+
+  const removeOSItem = (orderId: string, itemIdx: number) => {
+    setServiceOrders(prev => prev.map(o => {
+      if (o.id !== orderId) return o;
+      const currentItems = o.items || [];
+      const newItems = currentItems.filter((_, i) => i !== itemIdx);
+      const newTotal = newItems.reduce((acc, curr) => acc + (curr.quantity * curr.price), 0);
+      return { ...o, items: newItems, totalValue: newTotal };
+    }));
+  };
+
   const handleAddToFunnelSubmit = () => {
     if (!customerForFunnel) return;
     const uniqueId = `LEAD-${Date.now().toString().slice(-5)}-${Math.floor(100 + Math.random() * 900)}`;
@@ -691,17 +725,19 @@ export default function CustomerBaseView({
                                 <div className="text-right flex flex-col items-end gap-1">
                                   <span className="font-mono text-xs font-bold text-amber-500 leading-none">{formatBRL(os.totalValue)}</span>
                                   <span className={`font-mono text-[8px] px-2 py-0.5 rounded uppercase leading-none font-black tracking-widest ${
-                                    os.status === 'diagnostico' ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/20' :
+                                    (os.status === 'diagnostico' || os.status === 'aguardando') ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/20' :
                                     os.status === 'aguardando_pecas' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
                                     os.status === 'execucao' ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20' :
-                                    os.status === 'pronto' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                                    (os.status === 'pronto' || os.status === 'finalizado') ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                                    os.status === 'cancelado' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
                                     'bg-zinc-950 text-zinc-400 border border-zinc-800'
                                   }`}>
-                                    {os.status === 'diagnostico' && 'DIAGNÓSTICO'}
+                                    {(os.status === 'diagnostico' || os.status === 'aguardando') && 'AGUARDANDO'}
                                     {os.status === 'aguardando_pecas' && 'PEÇAS'}
                                     {os.status === 'execucao' && 'EXECUÇÃO'}
-                                    {os.status === 'pronto' && 'PRONTO'}
+                                    {(os.status === 'pronto' || os.status === 'finalizado') && 'FINALIZADO'}
                                     {os.status === 'entregue' && 'ENTREGUE'}
+                                    {os.status === 'cancelado' && 'CANCELADO'}
                                   </span>
                                 </div>
                                 <button 
@@ -717,31 +753,84 @@ export default function CustomerBaseView({
                             {isExpanded && (
                               <div className="p-4 border-t border-zinc-800 bg-[#0f1112] text-xs space-y-4">
                                 
-                                {/* Parts & Services list */}
-                                {os.items && os.items.length > 0 && (
-                                  <div className="space-y-1.5">
-                                    <p className="font-mono text-[9px] text-zinc-500 uppercase tracking-widest font-black">Peças & Serviços Incluídos</p>
-                                    <div className="bg-zinc-950/80 rounded-lg p-2.5 border border-zinc-850/60 divide-y divide-zinc-900">
-                                      {os.items.map((item, idx) => (
-                                        <div key={idx} className="py-1.5 flex items-center justify-between font-sans">
-                                          <div className="space-y-0.5">
-                                            <p className="text-zinc-300 font-medium">{item.description}</p>
-                                            <p className="font-mono text-[9px] text-zinc-600 font-bold">Qtd: {item.quantity} x {formatBRL(item.price)}</p>
+                                {/* Parts & Services list (Editable & Interactive) */}
+                                <div className="space-y-1.5 animate-fade-in">
+                                  <div className="flex items-center justify-between">
+                                    <p className="font-mono text-[9px] text-[#ab8987] uppercase tracking-wider font-extrabold flex items-center gap-1">
+                                      Peças & Serviços Incluídos
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={() => addOSItem(os.id)}
+                                      className="bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/30 hover:border-indigo-500 text-indigo-400 hover:text-white font-mono text-[9px] font-black px-2 py-0.5 rounded transition-all cursor-pointer flex items-center gap-1 uppercase tracking-wider"
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                      + Adicionar Linha
+                                    </button>
+                                  </div>
+
+                                  <div className="bg-zinc-950/90 rounded-lg p-3 border border-zinc-850/60 space-y-2">
+                                    {(!os.items || os.items.length === 0) ? (
+                                      <p className="text-[11px] text-zinc-500 italic py-2 text-center font-sans">Nenhuma peça ou serviço incluído nesta O.S.</p>
+                                    ) : (
+                                      <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                                        {os.items.map((item, idx) => (
+                                          <div key={idx} className="flex flex-col sm:flex-row gap-2 items-center justify-between py-1.5 border-b border-zinc-900/40 last:border-0">
+                                            <div className="flex-1 w-full">
+                                              <input
+                                                type="text"
+                                                value={item.description}
+                                                placeholder="Descrição da peça ou do serviço executado..."
+                                                onChange={(e) => updateOSItem(os.id, idx, 'description', e.target.value)}
+                                                className="w-full bg-[#111415] border border-zinc-800 focus:border-red-500 text-xs text-zinc-200 placeholder:text-zinc-650 rounded px-2.5 py-1.5 font-sans outline-none transition-all"
+                                              />
+                                            </div>
+                                            <div className="flex items-center gap-2 w-full sm:w-auto self-stretch sm:self-center">
+                                              <div className="flex items-center gap-1.5 flex-1 sm:flex-initial">
+                                                <span className="font-mono text-[8px] text-zinc-500 uppercase sm:hidden">Qtd:</span>
+                                                <input
+                                                  type="number"
+                                                  value={item.quantity}
+                                                  min="1"
+                                                  onChange={(e) => updateOSItem(os.id, idx, 'quantity', parseInt(e.target.value, 10) || 1)}
+                                                  className="w-14 bg-[#111415] border border-zinc-800 text-xs text-zinc-200 rounded px-1 py-1.5 text-center font-mono outline-none focus:border-red-500"
+                                                  placeholder="Qtd"
+                                                />
+                                              </div>
+                                              <div className="relative flex-1 sm:flex-initial">
+                                                <span className="absolute left-2 top-2 text-[9px] font-mono text-zinc-500">R$</span>
+                                                <input
+                                                  type="number"
+                                                  value={item.price}
+                                                  onChange={(e) => updateOSItem(os.id, idx, 'price', parseFloat(e.target.value) || 0)}
+                                                  className="w-full sm:w-24 bg-[#111415] border border-zinc-800 text-xs text-zinc-200 rounded pl-6 pr-2 py-1.5 text-right font-mono outline-none focus:border-red-500"
+                                                  placeholder="Preço"
+                                                />
+                                              </div>
+                                              <button
+                                                type="button"
+                                                onClick={() => removeOSItem(os.id, idx)}
+                                                className="p-1 text-zinc-500 hover:text-red-400 hover:bg-red-950/20 rounded cursor-pointer transition-all"
+                                                title="Remover Linha"
+                                              >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                              </button>
+                                            </div>
                                           </div>
-                                          <span className="font-mono text-[11px] text-white font-bold">{formatBRL(item.quantity * item.price)}</span>
-                                        </div>
-                                      ))}
-                                      <div className="pt-2 flex justify-between font-mono font-bold text-zinc-400 text-[10px]">
-                                        <span>TOTAL CONSOLIDADO</span>
-                                        <span className="text-amber-500">{formatBRL(os.totalValue)}</span>
+                                        ))}
                                       </div>
+                                    )}
+
+                                    <div className="pt-2.5 flex justify-between items-center font-mono font-bold text-zinc-400 text-[10px] border-t border-zinc-900">
+                                      <span>VALOR TOTAL RECALCULADO</span>
+                                      <span className="text-amber-500 text-xs font-black">{formatBRL(os.totalValue)}</span>
                                     </div>
                                   </div>
-                                )}
+                                </div>
 
                                 {/* Notes View */}
                                 <div className="space-y-1 bg-zinc-950 border border-zinc-850/60 rounded-lg p-3">
-                                  <p className="font-mono text-[9px] text-zinc-500 uppercase tracking-widest font-bold">Notas de Observação Técnica</p>
+                                  <p className="font-mono text-[9px] text-[#ab8987] uppercase tracking-widest font-bold">Notas de Observação Técnica</p>
                                   <textarea
                                     value={os.notes || ''}
                                     placeholder="Escreva anotações técnicas sobre este veículo ou serviço para consulta posterior..."
@@ -762,16 +851,16 @@ export default function CustomerBaseView({
                                     <select
                                       value={os.status}
                                       onChange={(e) => {
-                                        const newStatus = e.target.value as ServiceOrder['status'];
+                                        const newStatus = e.target.value as any;
                                         setServiceOrders(prev => prev.map(item => item.id === os.id ? { ...item, status: newStatus } : item));
                                       }}
-                                      className="bg-zinc-900 border-none text-zinc-200 py-1.5 px-2.5 rounded font-mono text-[10px] outline-none"
+                                      className="bg-[#111415] border border-zinc-800 text-zinc-200 py-1.5 px-2.5 rounded font-mono text-xs outline-none"
                                     >
-                                      <option value="diagnostico">DIAGNÓSTICO</option>
-                                      <option value="aguardando_pecas">AGUARDANDO PEÇAS</option>
-                                      <option value="execucao">EM EXECUÇÃO</option>
-                                      <option value="pronto">PRONTO / TESTADO</option>
-                                      <option value="entregue">ENTREGUE</option>
+                                      <option value="diagnostico">aguardando</option>
+                                      <option value="aguardando_pecas">aguardando peças</option>
+                                      <option value="execucao">execução</option>
+                                      <option value="pronto">finalizado</option>
+                                      <option value="cancelado">cancelado</option>
                                     </select>
                                   </div>
 
