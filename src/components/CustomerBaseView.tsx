@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   SlidersHorizontal,
   ChevronLeft,
@@ -37,6 +37,28 @@ interface CustomerBaseViewProps {
   onNewOrderClick?: (id: string) => void;
 }
 
+function OSNotesTextarea({ os, setServiceOrders }: { os: ServiceOrder; setServiceOrders: React.Dispatch<React.SetStateAction<ServiceOrder[]>> }) {
+  const [localNotes, setLocalNotes] = useState(os.notes || '');
+
+  useEffect(() => {
+    setLocalNotes(os.notes || '');
+  }, [os.notes, os.id]);
+
+  return (
+    <textarea
+      id={`os-notes-textarea-${os.id}`}
+      name="notes"
+      value={localNotes}
+      placeholder="Escreva anotações técnicas sobre este veículo ou serviço para consulta posterior..."
+      onChange={(e) => setLocalNotes(e.target.value)}
+      onBlur={() => {
+        setServiceOrders(prev => prev.map(item => item.id === os.id ? { ...item, notes: localNotes } : item));
+      }}
+      className="w-full bg-transparent text-zinc-300 py-1 text-xs outline-none focus:border-red-500 h-16 resize-none w-full scrollbar-none font-sans"
+    />
+  );
+}
+
 export default function CustomerBaseView({
   customers,
   setCustomers,
@@ -56,6 +78,12 @@ export default function CustomerBaseView({
   const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [expandedOSId, setExpandedOSId] = useState<string | null>(null);
+  const [editCustomerError, setEditCustomerError] = useState<string | null>(null);
+
+  const startEditingCustomer = (customer: Customer) => {
+    setEditCustomerError(null);
+    setEditingCustomer(customer);
+  };
 
   // Deletion state
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
@@ -215,6 +243,25 @@ export default function CustomerBaseView({
   // Edit save triggers
   const handleSaveCustomer = () => {
     if (!editingCustomer) return;
+    setEditCustomerError(null);
+
+    if (!editingCustomer.name || !editingCustomer.name.trim()) {
+      setEditCustomerError("O campo 'Nome' é obrigatório.");
+      return;
+    }
+    if (!editingCustomer.vehicleBrand || !editingCustomer.vehicleBrand.trim()) {
+      setEditCustomerError("A Marca do veículo é obrigatória.");
+      return;
+    }
+    if (!editingCustomer.vehicleModel || !editingCustomer.vehicleModel.trim()) {
+      setEditCustomerError("O Modelo do veículo é obrigatório.");
+      return;
+    }
+    if (!editingCustomer.vehiclePlate || !editingCustomer.vehiclePlate.trim()) {
+      setEditCustomerError("A Placa do veículo é obrigatória.");
+      return;
+    }
+
     setCustomers(prev => prev.map(c => c.id === editingCustomer.id ? editingCustomer : c));
     setEditingCustomer(null);
   };
@@ -385,7 +432,7 @@ export default function CustomerBaseView({
               {paginatedCustomers.map((customer) => (
                 <tr 
                   key={customer.id} 
-                  onClick={() => setEditingCustomer(customer)}
+                  onClick={() => startEditingCustomer(customer)}
                   className="border-b border-[#1d2021] hover:bg-[#1d2021]/60 cursor-pointer text-xs transition-all align-middle"
                 >
                   
@@ -535,6 +582,7 @@ export default function CustomerBaseView({
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-5xl w-full p-6 text-left space-y-5 relative shadow-2xl my-8">
             <div className="flex justify-between items-start border-b border-zinc-800 pb-4">
               <div>
+                <b className="hidden font-mono text-[10px]" />
                 <h4 className="font-semibold text-lg text-white uppercase tracking-tight flex items-center gap-2">
                   <UserCheck className="w-5 h-5 text-red-500" />
                   Perfil do Cliente & Histórico de O.S.
@@ -551,6 +599,12 @@ export default function CustomerBaseView({
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {editCustomerError && (
+              <div id="edit-customer-error-banner" className="bg-red-500/10 border border-red-500/35 text-red-500 px-4 py-2.5 rounded-lg text-xs font-mono select-text">
+                ⚠️ {editCustomerError}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 divide-y lg:divide-y-0 lg:divide-x divide-zinc-800">
               
@@ -831,15 +885,7 @@ export default function CustomerBaseView({
                                 {/* Notes View */}
                                 <div className="space-y-1 bg-zinc-950 border border-zinc-850/60 rounded-lg p-3">
                                   <p className="font-mono text-[9px] text-[#ab8987] uppercase tracking-widest font-bold">Notas de Observação Técnica</p>
-                                  <textarea
-                                    value={os.notes || ''}
-                                    placeholder="Escreva anotações técnicas sobre este veículo ou serviço para consulta posterior..."
-                                    onChange={(e) => {
-                                      const updatedNotes = e.target.value;
-                                      setServiceOrders(prev => prev.map(item => item.id === os.id ? { ...item, notes: updatedNotes } : item));
-                                    }}
-                                    className="w-full bg-transparent text-zinc-300 py-1 text-xs outline-none focus:border-red-500 h-16 resize-none w-full scrollbar-none font-sans"
-                                  />
+                                  <OSNotesTextarea os={os} setServiceOrders={setServiceOrders} />
                                 </div>
 
                                 {/* Status control & delete row */}

@@ -495,7 +495,7 @@ export default function App() {
   // Lead Conversion Auto Engine: When status arrows push Lead to approved, generate Service Order instantly!
   const handleApproveLeadToServiceOrder = (lead: Lead) => {
     // Check if duplicate prevention exists 
-    const alreadyExists = serviceOrders.some(order => order.notes?.includes(lead.id));
+    const alreadyExists = serviceOrders.some(order => order.id.includes(lead.id) || order.notes?.includes(lead.id));
     if (alreadyExists) return;
 
     const generatedId = `OS-AUTO-${Date.now().toString().slice(-5)}-${Math.floor(100 + Math.random() * 900)}`;
@@ -507,13 +507,24 @@ export default function App() {
       price: agreedPrice
     };
 
+    // Determine customer ID synchronously based on existing state
+    let finalCustomerId = '';
+    const alreadyPresent = customers.find(c => c.name.toLowerCase() === lead.name.toLowerCase());
+    if (alreadyPresent) {
+      finalCustomerId = alreadyPresent.id;
+    } else {
+      finalCustomerId = `CUST-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
+
+    const safePlate = (lead.vehiclePlate || 'ABC-1234').toUpperCase();
+
     const newOS: ServiceOrder = {
       id: generatedId,
-      customerId: `CUST-AUTO-${Date.now().toString().slice(-5)}-${Math.floor(100 + Math.random() * 900)}`,
+      customerId: finalCustomerId,
       customerName: lead.name,
       vehicleBrand: lead.vehicleBrand,
       vehicleModel: lead.vehicleModel,
-      vehiclePlate: lead.vehiclePlate || 'ABC-1234',
+      vehiclePlate: safePlate,
       description: `Upgrade de performance / Diagnóstico do funil (${lead.category})`,
       status: 'execucao', // puts immediately into action status
       totalValue: agreedPrice,
@@ -527,17 +538,16 @@ export default function App() {
 
     // Check if customer exists, increment billing or create new profile
     setCustomers(prevCust => {
-      const alreadyPresent = prevCust.find(c => c.name.toLowerCase() === lead.name.toLowerCase());
-      if (alreadyPresent) {
-        return prevCust.map(c => c.id === alreadyPresent.id 
+      const isPresent = prevCust.find(c => c.name.toLowerCase() === lead.name.toLowerCase());
+      if (isPresent) {
+        return prevCust.map(c => c.id === isPresent.id 
           ? { ...c, totalSpent: c.totalSpent + agreedPrice, status: 'VIP' } 
           : c
         );
       } else {
         const initials = lead.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-        const randId = `CUST-${Math.floor(1000 + Math.random() * 9000)}`;
         const freshCustomer: Customer = {
-          id: randId,
+          id: finalCustomerId,
           name: lead.name,
           email: lead.email,
           phone: lead.phone,
@@ -547,7 +557,7 @@ export default function App() {
           vehicleBrand: lead.vehicleBrand,
           vehicleModel: lead.vehicleModel,
           vehicleYear: lead.vehicleYear,
-          vehiclePlate: lead.vehiclePlate || 'ABC-1234',
+          vehiclePlate: safePlate,
           joinDate: new Date().toISOString().split('T')[0]
         };
         return [freshCustomer, ...prevCust];
