@@ -541,7 +541,15 @@ export default function App() {
       const isPresent = prevCust.find(c => c.name.toLowerCase() === lead.name.toLowerCase());
       if (isPresent) {
         return prevCust.map(c => c.id === isPresent.id 
-          ? { ...c, totalSpent: c.totalSpent + agreedPrice, status: 'VIP' } 
+          ? { 
+              ...c, 
+              totalSpent: c.totalSpent + agreedPrice, 
+              status: 'VIP',
+              vehicleBrand: c.vehicleBrand || lead.vehicleBrand,
+              vehicleModel: c.vehicleModel || lead.vehicleModel,
+              vehicleYear: c.vehicleYear || lead.vehicleYear,
+              vehiclePlate: c.vehiclePlate || safePlate
+            } 
           : c
         );
       } else {

@@ -718,7 +718,7 @@ export default function CustomerBaseView({
               </div>
 
               {/* Right Column: Service History (Cols 7) */}
-              <div className="lg:col-span-7 pt-4 lg:pt-0 pl-0 lg:pl-6 space-y-4">
+              <div id="ServiceHistoryView" className="lg:col-span-7 pt-4 lg:pt-0 pl-0 lg:pl-6 space-y-4">
                 <div className="flex items-center justify-between border-b border-zinc-850 pb-2">
                   <h5 className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider font-bold">
                     Histórico de Serviços do Veículo
@@ -737,7 +737,8 @@ export default function CustomerBaseView({
                 {(() => {
                   const clientOrders = serviceOrders.filter(o => 
                     (o.customerId && o.customerId === editingCustomer.id) || 
-                    (editingCustomer.vehiclePlate && o.vehiclePlate?.toUpperCase() === editingCustomer.vehiclePlate?.toUpperCase())
+                    (editingCustomer.name && o.customerName?.toLowerCase() === editingCustomer.name?.toLowerCase()) ||
+                    (editingCustomer.vehiclePlate && o.vehiclePlate?.trim() !== '' && o.vehiclePlate?.toUpperCase() === editingCustomer.vehiclePlate?.toUpperCase())
                   );
 
                   if (clientOrders.length === 0) {
