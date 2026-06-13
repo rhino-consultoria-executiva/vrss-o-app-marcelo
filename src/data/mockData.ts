@@ -14,6 +14,8 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     vehicleYear: 2022,
     vehiclePlate: 'RXY-9021',
     joinDate: '2025-01-15',
+    address: 'Av. Paulista, 1000 - São Paulo, SP',
+    cpf: '123.456.789-10'
   },
   {
     id: 'CUST-7741',
@@ -28,6 +30,8 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     vehicleYear: 2020,
     vehiclePlate: 'POR-9110',
     joinDate: '2025-02-10',
+    address: 'Av. Atlântica, 500 - Rio de Janeiro, RJ',
+    cpf: '234.567.890-11'
   },
   {
     id: 'CUST-4429',
@@ -42,6 +46,8 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     vehicleYear: 2021,
     vehiclePlate: 'AUD-6600',
     joinDate: '2025-03-01',
+    address: 'Rua Augusta, 1500 - São Paulo, SP',
+    cpf: '345.678.901-22'
   },
   {
     id: 'CUST-1102',
@@ -56,6 +62,8 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     vehicleYear: 2019,
     vehiclePlate: 'MBZ-3000',
     joinDate: '2024-11-20',
+    address: 'Av. Afonso Pena, 2000 - Belo Horizonte, MG',
+    cpf: '456.789.012-33'
   },
   {
     id: 'CUST-2051',
@@ -70,6 +78,8 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     vehicleYear: 2022,
     vehiclePlate: 'OSX-8800',
     joinDate: '2026-05-18',
+    address: 'Alameda Lorena, 800 - São Paulo, SP',
+    cpf: '567.890.123-44'
   }
 ];
 

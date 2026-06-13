@@ -23,6 +23,8 @@ export default function CustomerModal({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [cpf, setCpf] = useState('');
   const [vehicleBrand, setVehicleBrand] = useState(brandsList[0] || 'BMW');
   const [vehicleModel, setVehicleModel] = useState('');
   const [vehicleYear, setVehicleYear] = useState<number>(2021);
@@ -68,7 +70,9 @@ export default function CustomerModal({
       vehicleModel,
       vehicleYear,
       vehiclePlate: vehiclePlate.toUpperCase() || 'ABC-1234',
-      joinDate: new Date().toISOString().split('T')[0]
+      joinDate: new Date().toISOString().split('T')[0],
+      address,
+      cpf
     };
 
     setCustomers(prev => [freshCustomer, ...prev]);
@@ -81,6 +85,8 @@ export default function CustomerModal({
       setName('');
       setEmail('');
       setPhone('');
+      setAddress('');
+      setCpf('');
       setVehicleBrand('BMW');
       setVehicleModel('');
       setVehicleYear(2021);
@@ -168,6 +174,29 @@ export default function CustomerModal({
                 <option value="ATIVO" className="bg-zinc-900">ATIVO (Comum)</option>
                 <option value="VIP" className="bg-zinc-900">VIP (Alta Performance)</option>
               </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="font-mono text-[9px] text-zinc-500 uppercase">CPF do Cliente</label>
+              <input
+                type="text"
+                placeholder="ex: 123.456.789-10"
+                value={cpf}
+                onChange={e => setCpf(e.target.value)}
+                className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="font-mono text-[9px] text-zinc-500 uppercase">Endereço Completo</label>
+              <input
+                type="text"
+                placeholder="ex: Av. Paulista, 1000 - São Paulo, SP"
+                value={address}
+                onChange={e => setAddress(e.target.value)}
+                className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-lg px-3 py-2 text-xs outline-none focus:border-indigo-500"
+              />
             </div>
           </div>
 

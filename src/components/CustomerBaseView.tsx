@@ -191,6 +191,8 @@ export default function CustomerBaseView({
       c.name.toLowerCase().includes(q) ||
       c.email.toLowerCase().includes(q) ||
       c.phone.includes(q) ||
+      (c.cpf && c.cpf.toLowerCase().includes(q)) ||
+      (c.address && c.address.toLowerCase().includes(q)) ||
       c.vehicleModel.toLowerCase().includes(q) ||
       c.vehiclePlate.toLowerCase().includes(q) ||
       c.vehicleBrand.toLowerCase().includes(q)
@@ -469,7 +471,14 @@ export default function CustomerBaseView({
                   <td className="py-5 text-[#e1e3e4]/80 align-middle">
                     <div className="space-y-0.5 font-sans">
                       <p className="leading-snug hover:text-white transition-colors">{customer.email}</p>
-                      <p className="font-mono text-[10px] text-[#ab8987] leading-none">{customer.phone}</p>
+                      <p className="font-mono text-[10px] text-[#ab8987] leading-none">
+                        {customer.phone} {customer.cpf && ` | CPF: ${customer.cpf}`}
+                      </p>
+                      {customer.address && (
+                        <p className="text-[10px] text-zinc-500 truncate max-w-[200px]" title={customer.address}>
+                          {customer.address}
+                        </p>
+                      )}
                     </div>
                   </td>
 
@@ -656,6 +665,29 @@ export default function CustomerBaseView({
                         <option value="ATIVO">ATIVO</option>
                         <option value="INATIVO">INATIVO</option>
                       </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="font-mono text-[9px] text-[#ab8987] uppercase">CPF do Cliente</label>
+                      <input
+                        type="text"
+                        value={editingCustomer.cpf || ''}
+                        onChange={e => setEditingCustomer({ ...editingCustomer, cpf: e.target.value })}
+                        className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]"
+                        placeholder="123.456.789-10"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="font-mono text-[9px] text-[#ab8987] uppercase">Endereço Completo</label>
+                      <input
+                        type="text"
+                        value={editingCustomer.address || ''}
+                        onChange={e => setEditingCustomer({ ...editingCustomer, address: e.target.value })}
+                        className="w-full bg-[#111415] border border-[#2d2d2d] text-white rounded px-3 py-2 text-xs outline-none focus:border-[#ff535b]"
+                        placeholder="Rua, Número, Bairro - Cidade, UF"
+                      />
                     </div>
                   </div>
 

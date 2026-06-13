@@ -86,6 +86,8 @@ export const mapCustomerFromDb = (db: any): Customer => ({
   vehicleYear: db.vehicle_year || new Date().getFullYear(),
   vehiclePlate: db.vehicle_plate || '',
   joinDate: db.join_date || new Date().toISOString().split('T')[0],
+  address: db.address || '',
+  cpf: db.cpf || '',
 });
 
 export const mapCustomerToDb = (c: Customer) => ({
@@ -101,6 +103,8 @@ export const mapCustomerToDb = (c: Customer) => ({
   vehicle_year: c.vehicleYear,
   vehicle_plate: c.vehiclePlate,
   join_date: c.joinDate,
+  address: c.address || '',
+  cpf: c.cpf || '',
 });
 
 export const mapLeadFromDb = (db: any): Lead => ({

@@ -11,6 +11,8 @@ export interface Customer {
   vehicleYear: number;
   vehiclePlate: string;
   joinDate: string;
+  address?: string;
+  cpf?: string;
 }
 
 export interface Lead {

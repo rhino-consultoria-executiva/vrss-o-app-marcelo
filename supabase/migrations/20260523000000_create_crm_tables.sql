@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS customers (
   vehicle_year INTEGER,
   vehicle_plate TEXT,
   join_date DATE DEFAULT CURRENT_DATE,
+  address TEXT,
+  cpf TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -282,5 +284,10 @@ CREATE POLICY "Allow logged-in users full access to funnel_stages"
   TO authenticated
   USING (true)
   WITH CHECK (true);
+
+-- Ensure backwards-compatibility for existing environments
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS cpf TEXT;
+
 
 
