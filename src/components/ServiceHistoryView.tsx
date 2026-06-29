@@ -18,7 +18,7 @@ import {
   Pencil,
   Plus
 } from 'lucide-react';
-import { ServiceOrder } from '../types';
+import { ServiceOrder, Customer } from '../types';
 import { jsPDF } from 'jspdf';
 
 interface ServiceHistoryViewProps {
@@ -26,13 +26,15 @@ interface ServiceHistoryViewProps {
   setServiceOrders: React.Dispatch<React.SetStateAction<ServiceOrder[]>>;
   onNewOrderClick?: () => void;
   searchQuery?: string;
+  customers?: Customer[];
 }
 
 export default function ServiceHistoryView({
   serviceOrders,
   setServiceOrders,
   onNewOrderClick,
-  searchQuery = ''
+  searchQuery = '',
+  customers = []
  }: ServiceHistoryViewProps) {
   const [selectedOrder, setSelectedOrder] = useState<ServiceOrder | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -171,8 +173,8 @@ ${divider}
     URL.revokeObjectURL(url);
   };
 
-  // PDF proposal download (A4 high-quality format)
-  const handleDownloadPdf = async (order: ServiceOrder, type: 'orçamento' | 'recibo') => {
+  // PDF proposal download & Print (A4 high-quality format)
+  const handleGeneratePdf = async (order: ServiceOrder, type: 'orçamento' | 'recibo', action: 'download' | 'print') => {
     const doc = new jsPDF();
     
     // Load Logo Base64
@@ -274,50 +276,72 @@ ${divider}
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(9);
     
+    // Find customer detailed address/cpf
+    const customerDetails = customers.find(c => 
+      c.id === order.customerId || 
+      (c.name && c.name.toLowerCase() === order.customerName.toLowerCase())
+    );
+
     // Left column
     doc.setFont("Helvetica", "bold");
-    doc.setTextColor(113, 113, 122); // Zinc 500
-    doc.text("Cliente:", 15, 66);
-    doc.setFont("Helvetica", "normal");
-    doc.setTextColor(39, 39, 42); // Zinc 800
-    doc.text(order.customerName, 30, 66);
-    
-    doc.setFont("Helvetica", "bold");
     doc.setTextColor(113, 113, 122);
-    doc.text("Sintoma:", 15, 73);
+    doc.text("Cliente:", 15, 64);
     doc.setFont("Helvetica", "normal");
     doc.setTextColor(39, 39, 42);
-    const safeDesc = order.description.length > 70 ? order.description.substring(0, 70) + "..." : order.description;
-    doc.text(safeDesc, 32, 73);
-    
+    doc.text(order.customerName, 28, 64);
+
     doc.setFont("Helvetica", "bold");
     doc.setTextColor(113, 113, 122);
-    doc.text("Emissão:", 15, 80);
+    doc.text("CPF:", 15, 70);
     doc.setFont("Helvetica", "normal");
     doc.setTextColor(39, 39, 42);
-    doc.text(order.dateCreated, 32, 80);
+    doc.text(customerDetails?.cpf || "Não informado", 24, 70);
+
+    doc.setFont("Helvetica", "bold");
+    doc.setTextColor(113, 113, 122);
+    doc.text("Endereço:", 15, 76);
+    doc.setFont("Helvetica", "normal");
+    doc.setTextColor(39, 39, 42);
+    const rawAddress = customerDetails?.address || "Não informado";
+    const safeAddress = rawAddress.length > 55 ? rawAddress.substring(0, 55) + "..." : rawAddress;
+    doc.text(safeAddress, 33, 76);
+
+    doc.setFont("Helvetica", "bold");
+    doc.setTextColor(113, 113, 122);
+    doc.text("Sintoma:", 15, 82);
+    doc.setFont("Helvetica", "normal");
+    doc.setTextColor(39, 39, 42);
+    const safeDesc = order.description.length > 55 ? order.description.substring(0, 55) + "..." : order.description;
+    doc.text(safeDesc, 30, 82);
     
     // Right column
     doc.setFont("Helvetica", "bold");
     doc.setTextColor(113, 113, 122);
-    doc.text("Veículo:", 110, 66);
+    doc.text("Veículo:", 110, 64);
     doc.setFont("Helvetica", "normal");
     doc.setTextColor(39, 39, 42);
-    doc.text(`${order.vehicleBrand} ${order.vehicleModel}`, 125, 66);
+    doc.text(`${order.vehicleBrand} ${order.vehicleModel}`, 125, 64);
     
     doc.setFont("Helvetica", "bold");
     doc.setTextColor(113, 113, 122);
-    doc.text("Placa:", 110, 73);
+    doc.text("Placa:", 110, 70);
     doc.setFont("Helvetica", "bold");
     doc.setTextColor(185, 28, 28); // Premium red for plate number
-    doc.text(order.vehiclePlate, 122, 73);
+    doc.text(order.vehiclePlate, 122, 70);
     
     doc.setFont("Helvetica", "bold");
     doc.setTextColor(113, 113, 122);
-    doc.text("Estágio:", 110, 80);
+    doc.text("Estágio:", 110, 76);
     doc.setFont("Helvetica", "normal");
     doc.setTextColor(39, 39, 42);
-    doc.text(order.status.toUpperCase(), 125, 80);
+    doc.text(order.status.toUpperCase(), 125, 76);
+
+    doc.setFont("Helvetica", "bold");
+    doc.setTextColor(113, 113, 122);
+    doc.text("Emissão:", 110, 82);
+    doc.setFont("Helvetica", "normal");
+    doc.setTextColor(39, 39, 42);
+    doc.text(order.dateCreated, 127, 82);
     
     // Items table header
     // Left performance pill accent
@@ -456,8 +480,44 @@ ${divider}
     doc.text("MC AUTOMECÂNICA AUTORIZADO", 23, currentY + 5);
     doc.text("CLIENTE RESPONSÁVEL", 135, currentY + 5);
     
-    // Save as PDF
-    doc.save(`${type === 'orçamento' ? 'orcamento' : 'recibo'}_OS-${order.id}.pdf`);
+    if (action === 'download') {
+      // Save as PDF
+      doc.save(`${type === 'orçamento' ? 'orcamento' : 'recibo'}_OS-${order.id}.pdf`);
+    } else {
+      // Action: Print PDF high-fidelity with same exact styles
+      doc.autoPrint();
+      const pdfBlob = doc.output('blob');
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
+      iframe.src = blobUrl;
+      
+      document.body.appendChild(iframe);
+      
+      iframe.onload = () => {
+        setTimeout(() => {
+          try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+            
+            // Clean up resources after print dialogue opens
+            setTimeout(() => {
+              document.body.removeChild(iframe);
+              URL.revokeObjectURL(blobUrl);
+            }, 5000);
+          } catch (e) {
+            console.error("Direct iframe print failed, opening in new tab", e);
+            window.open(blobUrl, '_blank');
+          }
+        }, 300);
+      };
+    }
   };
 
   // Copy proposal to clipboard
@@ -798,66 +858,80 @@ ${divider}
                 </div>
 
                 {/* Simulated Printed proposal */}
-                <div id="proposal-print-area" className="bg-zinc-950 border border-zinc-850 p-5 rounded-lg space-y-4 font-mono text-xs border-l-2 border-l-red-500">
-                  <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
-                    <div>
-                      <p className="font-bold text-white">MC AUTOMECÂNICA & PERFORMANCE</p>
-                      <p className="text-[9px] text-zinc-500">CNPJ: 45.109.844/0001-92 • Fone: (11) 98765-4321</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-red-500 uppercase tracking-widest">{docType === 'orçamento' ? 'ORÇAMENTO' : 'RECIBO DE SERVIÇO'}</p>
-                      <p className="text-[9px] text-zinc-500">REF: {selectedOrder.id}</p>
-                    </div>
-                  </div>
-
-                  {/* Client & Car specifications */}
-                  <div className="grid grid-cols-2 gap-4 text-[10px] border-b border-zinc-850 pb-3">
-                    <div>
-                      <span className="text-zinc-550 block">CLIENTE:</span>
-                      <span className="text-white block font-sans font-bold">{selectedOrder.customerName}</span>
-                    </div>
-                    <div>
-                      <span className="text-zinc-550 block">VEÍCULO & PLACA:</span>
-                      <span className="text-white block">{selectedOrder.vehicleBrand} {selectedOrder.vehicleModel}</span>
-                      <span className="text-red-500 font-bold block mt-0.5">{selectedOrder.vehiclePlate}</span>
-                    </div>
-                  </div>
-
-                  {/* Items Table details */}
-                  <div className="space-y-2">
-                    <span className="text-zinc-500 text-[9px] uppercase block pb-1 border-b border-zinc-850">
-                      {docType === 'orçamento' ? 'Itens de Reparo & Orçamento Estimado' : 'Discriminativo de Itens de Serviço Concluídos'}
-                    </span>
-                    <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                      {selectedOrder.items.map((it, idx) => (
-                        <div key={idx} className="flex justify-between text-[11px] text-zinc-300">
-                          <span>{it.quantity}x {it.description}</span>
-                          <span>{formatBRL(it.price * it.quantity)}</span>
+                {(() => {
+                  const customerDetails = customers.find(c => 
+                    c.id === selectedOrder.customerId || 
+                    (c.name && c.name.toLowerCase() === selectedOrder.customerName.toLowerCase())
+                  );
+                  return (
+                    <div id="proposal-print-area" className="bg-zinc-950 border border-zinc-850 p-5 rounded-lg space-y-4 font-mono text-xs border-l-2 border-l-red-500">
+                      <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
+                        <div>
+                          <p className="font-bold text-white">MC AUTOMECÂNICA & PERFORMANCE</p>
+                          <p className="text-[9px] text-zinc-500">CNPJ: 45.109.844/0001-92 • Fone: (11) 98765-4321</p>
                         </div>
-                      ))}
-                      {selectedOrder.items.length === 0 && (
-                        <p className="text-center text-zinc-500 text-[10px]">Nenhuma especificação cadastrada.</p>
-                      )}
+                        <div className="text-right">
+                          <p className="font-bold text-red-500 uppercase tracking-widest">{docType === 'orçamento' ? 'ORÇAMENTO' : 'RECIBO DE SERVIÇO'}</p>
+                          <p className="text-[9px] text-zinc-500">REF: {selectedOrder.id}</p>
+                        </div>
+                      </div>
+
+                      {/* Client & Car specifications */}
+                      <div className="grid grid-cols-2 gap-4 text-[10px] border-b border-zinc-850 pb-3">
+                        <div>
+                          <span className="text-zinc-550 block">CLIENTE:</span>
+                          <span className="text-white block font-sans font-bold">{selectedOrder.customerName}</span>
+                          {customerDetails?.cpf && (
+                            <span className="text-zinc-400 block text-[9px] mt-0.5">CPF: {customerDetails.cpf}</span>
+                          )}
+                          {customerDetails?.address && (
+                            <span className="text-zinc-400 block text-[9px] mt-0.5 leading-tight">Endereço: {customerDetails.address}</span>
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-zinc-550 block">VEÍCULO & PLACA:</span>
+                          <span className="text-white block">{selectedOrder.vehicleBrand} {selectedOrder.vehicleModel}</span>
+                          <span className="text-red-500 font-bold block mt-0.5">{selectedOrder.vehiclePlate}</span>
+                        </div>
+                      </div>
+
+                      {/* Items Table details */}
+                      <div className="space-y-2">
+                        <span className="text-zinc-500 text-[9px] uppercase block pb-1 border-b border-zinc-850">
+                          {docType === 'orçamento' ? 'Itens de Reparo & Orçamento Estimado' : 'Discriminativo de Itens de Serviço Concluídos'}
+                        </span>
+                        <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                          {selectedOrder.items.map((it, idx) => (
+                            <div key={idx} className="flex justify-between text-[11px] text-zinc-300">
+                              <span>{it.quantity}x {it.description}</span>
+                              <span>{formatBRL(it.price * it.quantity)}</span>
+                            </div>
+                          ))}
+                          {selectedOrder.items.length === 0 && (
+                            <p className="text-center text-zinc-500 text-[10px]">Nenhuma especificação cadastrada.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Document footer & total */}
+                      <div className="border-t border-zinc-850 pt-3 flex justify-between items-center text-xs font-bold font-mono">
+                        <span className="text-zinc-500">
+                          {docType === 'orçamento' ? 'ESTIMATIVA TOTAL:' : 'TOTAL QUITADO:'}
+                        </span>
+                        <span className="text-red-500 text-sm font-black">{formatBRL(selectedOrder.totalValue)}</span>
+                      </div>
+
+                      {/* Legal Terms representation */}
+                      <div className="text-[8px] leading-relaxed text-zinc-500 pt-2 border-t border-zinc-900 border-dashed">
+                        {docType === 'orçamento' ? (
+                          <p>* Validade da proposta: 10 dias. O início dos trabalhos dependerá da assinatura de concordância por parte do proprietário. Garantia legal aplicada de 90 dias.</p>
+                        ) : (
+                          <p>* Declaração de quitação de serviço. Veículo liberado para tráfego sob termo padrão de satisfação e garantia operacional regular de 90 dias.</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Document footer & total */}
-                  <div className="border-t border-zinc-850 pt-3 flex justify-between items-center text-xs font-bold font-mono">
-                    <span className="text-zinc-500">
-                      {docType === 'orçamento' ? 'ESTIMATIVA TOTAL:' : 'TOTAL QUITADO:'}
-                    </span>
-                    <span className="text-red-500 text-sm font-black">{formatBRL(selectedOrder.totalValue)}</span>
-                  </div>
-
-                  {/* Legal Terms representation */}
-                  <div className="text-[8px] leading-relaxed text-zinc-500 pt-2 border-t border-zinc-900 border-dashed">
-                    {docType === 'orçamento' ? (
-                      <p>* Validade da proposta: 10 dias. O início dos trabalhos dependerá da assinatura de concordância por parte do proprietário. Garantia legal aplicada de 90 dias.</p>
-                    ) : (
-                      <p>* Declaração de quitação de serviço. Veículo liberado para tráfego sob termo padrão de satisfação e garantia operacional regular de 90 dias.</p>
-                    )}
-                  </div>
-                </div>
+                  );
+                })()}
 
                 {/* Notes */}
                 {selectedOrder.notes && (
@@ -874,7 +948,7 @@ ${divider}
                   <span className="font-mono text-[9px] text-zinc-550 uppercase tracking-wider block">Exportar & Enviar ao Cliente</span>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                     <button
-                      onClick={() => handleDownloadPdf(selectedOrder, docType)}
+                      onClick={() => handleGeneratePdf(selectedOrder, docType, 'download')}
                       className="bg-red-600 hover:bg-red-700 font-sans text-xs text-white font-bold py-3 px-2 rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95 duration-100"
                     >
                       <FileDown className="w-4 h-4 text-white" />
@@ -893,7 +967,7 @@ ${divider}
                       ) : (
                         <>
                           <Copy className="w-4 h-4 text-red-500" />
-                          Enviar p/ WhatsApp
+                          Copiar Texto
                         </>
                       )}
                     </button>
@@ -929,7 +1003,7 @@ ${divider}
 
                   <div className="flex gap-2 w-full sm:w-auto justify-end">
                     <button
-                      onClick={() => window.print()}
+                      onClick={() => handleGeneratePdf(selectedOrder, docType, 'print')}
                       className="bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 hover:border-red-500 font-mono text-xs text-white px-3.5 py-2.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
                     >
                       <Printer className="w-4 h-4 text-red-500" /> Imprimir

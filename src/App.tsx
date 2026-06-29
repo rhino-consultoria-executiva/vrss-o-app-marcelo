@@ -651,6 +651,7 @@ export default function App() {
               setServiceOrders={setServiceOrders}
               onNewOrderClick={() => setIsOSModalOpen(true)}
               searchQuery={searchQuery}
+              customers={customers}
             />
           )}
 
@@ -687,6 +688,7 @@ export default function App() {
               setServiceOrders={setServiceOrders}
               onNewOrderClick={() => setIsOSModalOpen(true)}
               searchQuery={searchQuery}
+              customers={customers}
             />
           )}
 
